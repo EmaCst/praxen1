@@ -66,13 +66,55 @@
     const coordinates=data.map((p,i)=>`${X(i)},${Y(p.value)}`).join(' ');svg+=`<polyline points="${coordinates}" fill="none" stroke="${color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
     data.forEach((p,i)=>{const label=p.period||date(p.startedAt).replace(/\s.*$/,'');svg+=`<circle cx="${X(i)}" cy="${Y(p.value)}" r="4" fill="white" stroke="${color}" stroke-width="2.5"><title>${txt(label)}: ${number(p.value)} ${txt(unit)}</title></circle>`;if(i===0||i===data.length-1||i%Math.max(1,Math.ceil(data.length/5))===0)svg+=`<text x="${X(i)}" y="${h-8}" font-size="10" text-anchor="middle" fill="#a2b0be">${txt(label)}</text>`;});target.innerHTML=svg+'</svg>';
   }
+  function plotMultiple(id,series){
+    const target=$(id), available=series.filter(s=>s.points?.some(p=>Number.isFinite(p.value)));
+    if(!available.length){target.innerHTML='<div class="empty">Todavía no hay datos para esta gráfica.</div>';return;}
+    const allDates=[...new Set(available.flatMap(s=>s.points.map(p=>p.period).filter(Boolean)))].sort();
+    if(!allDates.length){target.innerHTML='<div class="empty">No hay fechas disponibles.</div>';return;}
+    const w=590,h=240,L=45,R=16,T=18,B=39,pw=w-L-R,ph=h-T-B;
+    const values=available.flatMap(s=>s.points.map(p=>p.value).filter(Number.isFinite));
+    const minimum=Math.min(0,...values),maximum=Math.max(...values),range=Math.max(1,maximum-minimum);
+    const X=date=>L+(allDates.length===1?pw/2:pw*allDates.indexOf(date)/(allDates.length-1));
+    const Y=value=>T+ph-(value-minimum)*ph/range;
+    let svg='<svg role="img" aria-label="Evolución del rendimiento por fecha" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">';
+    for(let i=0;i<=4;i++){const y=T+ph*i/4;svg+='<line x1="'+L+'" y1="'+y+'" x2="'+(w-R)+'" y2="'+y+'" stroke="#ebf0f6" stroke-dasharray="4 5"/><text x="'+(L-9)+'" y="'+(y+4)+'" text-anchor="end" fill="#a3b0bc" font-size="10">'+number(maximum-range*i/4)+'</text>';}
+    for(const dateKey of allDates){const x=X(dateKey);svg+='<text x="'+x+'" y="'+(h-8)+'" font-size="10" text-anchor="middle" fill="#a2b0be">'+txt(dateKey.slice(8,10)+'/'+dateKey.slice(5,7))+'</text>';}
+    for(const serie of available){
+      const meta=TYPES[serie.exerciseType],color=meta?.color||'#4779ec',unit=serie.metric?.unit||'';
+      const points=serie.points.filter(p=>Number.isFinite(p.value)&&allDates.includes(p.period)).sort((a,b)=>a.period.localeCompare(b.period));
+      if(points.length>1)svg+='<polyline points="'+points.map(p=>X(p.period)+','+Y(p.value)).join(' ')+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
+      for(const p of points){
+        const x=X(p.period),y=Y(p.value),label=(meta?.short||serie.exerciseType)+' · '+p.period+': '+number(p.value)+(unit==='%'?'%':unit?' '+unit:'');
+        svg+='<circle cx="'+x+'" cy="'+y+'" r="5" fill="white" stroke="'+color+'" stroke-width="2.5"/>';
+        svg+='<circle cx="'+x+'" cy="'+y+'" r="13" fill="transparent" stroke="transparent" tabindex="0" role="img" aria-label="'+txt(label)+'"><title>'+txt(label)+'</title></circle>';
+      }
+    }
+    target.innerHTML=svg+'</svg>';
+  }
   function typeList(session){return Object.entries({aimlab:'exercises',feet_targets:'footExercises',running_direction_change:'runningExercises'}).filter(([type,key])=>session[key]?.some(x=>x.exerciseType===type)).map(([type])=>TYPES[type].short).join(', ')||'—';}
   function renderSessions(id,list,withAthlete=false){$(id).innerHTML=list.length?list.map(s=>`<tr>${withAthlete?`<td><strong>${txt(state.athleteCache.find(a=>a.id===s.athleteId)?.nombre||`#${s.athleteId}`)}</strong></td>`:''}<td>${date(s.startedAt)}</td><td>${txt(modeLabel(s.mode))}</td><td>${typeList(s)}</td><td>${duration((new Date(s.endedAt)-new Date(s.startedAt))/1000)}</td><td><button class="link-button" data-session="${txt(s.sessionId)}">Ver detalle →</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No hay sesiones para mostrar.</td></tr>';}
   async function loadDashboard(){const serial=++state.serial;const query=qs(filters());$('count-sessions').textContent='…';try{
     const [summary,latest]=await Promise.all([request('/api/admin/resultados/resumen'+query),request('/api/admin/resultados/sesiones'+qs({...filters(),limit:20,offset:0}))]);if(serial!==state.serial)return;
     renderSummary(summary.summary);state.recent=latest.sesiones||[];renderSessions('recent-body',state.recent,true);await loadTrend(false,serial);
   }catch(e){if(serial!==state.serial)return;notice(e.message,'error');$('count-sessions').textContent='—';}}
-  async function loadTrend(individual=false,serial=state.serial){try{const type=individual?$('detail-type').value:($('exercise').value||$('trend-type').value),query={...(individual?{athleteId:state.selected?.id}:filters()),exerciseType:type,limit:12,period:individual?'month':'day'};const data=await request('/api/admin/resultados/evolucion'+qs(query));if(serial!==state.serial)return;const serie=data.evolution?.series?.find(s=>s.exerciseType===type);plot(individual?'detail-chart':'trend',serie?.points,serie?.metric?.unit||'',TYPES[type].color);$(individual?'detail-chart-caption':'trend-caption').textContent=serie?`${serie.metric.label} · ${serie.metric.unit||'sin unidad'} · ${individual?'por sesión':'por fecha'}`:'Sin métricas disponibles para este ejercicio';}catch(e){if(serial===state.serial)notice(e.message,'error');}}
+  async function loadTrend(individual=false,serial=state.serial){
+    try{
+      const selected=individual?$('detail-type').value:($('exercise').value||$('trend-type').value);
+      const query={...(individual?{athleteId:state.selected?.id}:filters()),exerciseType:selected,limit:12,period:individual?'month':'day'};
+      const data=await request('/api/admin/resultados/evolucion'+qs(query));
+      if(serial!==state.serial)return;
+      const series=data.evolution?.series||[];
+      if(individual){
+        const serie=series.find(s=>s.exerciseType===selected);
+        plot('detail-chart',serie?.points,serie?.metric?.unit||'',TYPES[selected].color);
+        $('detail-chart-caption').textContent=serie?serie.metric.label+' · '+(serie.metric.unit||'sin unidad')+' · por sesión':'Sin métricas disponibles para este ejercicio';
+      }else{
+        const visible=selected?series.filter(s=>s.exerciseType===selected):series;
+        plotMultiple('trend',visible);
+        $('trend-caption').textContent=visible.length?visible.map(s=>(TYPES[s.exerciseType]?.short||s.exerciseType)+': '+(s.metric?.label||'Indicador')+' ('+(s.metric?.unit||'sin unidad')+')').join(' · ')+' · por fecha':'Sin métricas disponibles';
+      }
+    }catch(e){if(serial===state.serial)notice(e.message,'error');}
+  }
   async function loadAthletes(){const search=$('athlete-search').value.trim(),federacion=$('athlete-federation').value;const query={limit:50,offset:state.athletePage*50,federacion,...(search.length>=2?{search}:{})};try{const data=await request('/api/admin/atletas'+qs(query));state.athleteTotal=data.total||0;state.athleteCache=data.atletas||[];$('athletes-body').innerHTML=state.athleteCache.length?state.athleteCache.map(a=>`<tr data-athlete="${a.id}" tabindex="0" role="button" aria-label="Ver perfil de ${txt(fullName(a))}"><td><span class="initial">${txt((a.nombre||'?')[0])}</span><strong>${txt(fullName(a))}</strong></td><td>${txt(a.federacion||'Sin declarar')}</td><td>${date(a.createdAt)}</td><td><button class="link-button" data-athlete="${a.id}">Ver perfil →</button></td></tr>`).join(''):'<tr><td colspan="4" class="empty">No se encontraron atletas.</td></tr>';$('athletes-count').textContent=`${data.total} atletas · página ${state.athletePage+1}`;$('athletes-prev').disabled=state.athletePage===0;$('athletes-next').disabled=(state.athletePage+1)*50>=state.athleteTotal;fillCompareOptions();}catch(e){notice(e.message,'error');}}
   function fillCompareOptions(){for(const id of ['compare-a','compare-b']){const el=$(id),old=el.value;el.innerHTML=state.athleteCache.map(a=>`<option value="${a.id}">${txt(a.nombre)}</option>`).join('');if(old&&state.athleteCache.some(a=>String(a.id)===old))el.value=old;}if($('compare-b').options.length>1&&$('compare-b').value===$('compare-a').value)$('compare-b').selectedIndex=1;}
   async function openAthlete(id){let athlete=state.athleteCache.find(a=>String(a.id)===String(id));if(!athlete){const found=await request('/api/admin/atletas'+qs({athleteId:id,limit:1}));athlete=found.atletas?.[0];}if(!athlete)return;state.selected=athlete;state.detailPage=0;$('detail-name').textContent=athlete.nombre;$('detail-federation').textContent=`Federación declarada: ${athlete.federacion||'Sin declarar'}`;show('detail');await loadDetail();}
