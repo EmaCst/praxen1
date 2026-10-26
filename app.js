@@ -64,7 +64,7 @@
     let svg=`<svg role="img" aria-label="Serie temporal de ${data.length} puntos" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">`;
     for(let i=0;i<=4;i++){const y=T+plotH*i/4;svg+=`<line x1="${L}" y1="${y}" x2="${w-R}" y2="${y}" stroke="#ebf0f6" stroke-dasharray="4 5"/><text x="${L-9}" y="${y+4}" text-anchor="end" fill="#a3b0bc" font-size="10">${number(maximum-range*i/4)}</text>`;}
     const coordinates=data.map((p,i)=>`${X(i)},${Y(p.value)}`).join(' ');svg+=`<polyline points="${coordinates}" fill="none" stroke="${color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
-    data.forEach((p,i)=>{const label=p.period||date(p.startedAt).replace(/\s.*$/,'');svg+=`<circle cx="${X(i)}" cy="${Y(p.value)}" r="4" fill="white" stroke="${color}" stroke-width="2.5"><title>${txt(label)}: ${number(p.value)} ${txt(unit)}</title></circle>`;if(i===0||i===data.length-1||i%Math.max(1,Math.ceil(data.length/5))===0)svg+=`<text x="${X(i)}" y="${h-8}" font-size="10" text-anchor="middle" fill="#a2b0be">${txt(label)}</text>`;});target.innerHTML=svg+'</svg>';
+    data.forEach((p,i)=>{const label=p.period||date(p.startedAt);svg+=`<circle cx="${X(i)}" cy="${Y(p.value)}" r="5" fill="white" stroke="${color}" stroke-width="2.5"/><circle class="trend-hit" cx="${X(i)}" cy="${Y(p.value)}" r="14" fill="transparent" data-date="${txt(p.startedAt||p.period||'')}" data-exercise="Resultado" data-value="${txt(number(p.value)+(unit==='%'?'%':unit?' '+unit:''))}" data-color="${color}" tabindex="0" role="button" aria-label="${txt(label+': '+number(p.value)+' '+unit)}"/>`;if(i===0||i===data.length-1||i%Math.max(1,Math.ceil(data.length/5))===0)svg+=`<text x="${X(i)}" y="${h-8}" font-size="10" text-anchor="middle" fill="#a2b0be">${txt(label)}</text>`;});target.innerHTML=svg+'</svg>'; attachTrendTooltip(target,w,h);
   }
   function plotMultiple(id,series){
     const target=$(id), available=series.filter(s=>s.points?.some(p=>Number.isFinite(p.value)));
@@ -89,7 +89,9 @@
         svg+='<circle class="trend-hit" data-date="'+txt(p.period)+'" data-exercise="'+txt(meta?.short||serie.exerciseType)+'" data-value="'+txt(number(p.value)+(unit==='%'?'%':unit?' '+unit:''))+'" data-color="'+color+'" cx="'+x+'" cy="'+y+'" r="14" fill="transparent" stroke="transparent" tabindex="0" role="button" aria-label="'+txt(label)+'"/>';
       }
     }
-    target.innerHTML=svg+'</svg><div class="trend-tooltip" hidden><strong></strong><span></span></div>';
+    attachTrendTooltip(target,w,h);
+  function attachTrendTooltip(target,w,h){
+    target.insertAdjacentHTML('beforeend','<div class="trend-tooltip" hidden><strong></strong><span></span></div>');
     const tooltip=target.querySelector('.trend-tooltip');
     const showPoint=point=>{
       const bounds=target.querySelector('svg').getBoundingClientRect();
