@@ -86,10 +86,32 @@
       for(const p of points){
         const x=X(p.period),y=Y(p.value),label=(meta?.short||serie.exerciseType)+' · '+p.period+': '+number(p.value)+(unit==='%'?'%':unit?' '+unit:'');
         svg+='<circle cx="'+x+'" cy="'+y+'" r="5" fill="white" stroke="'+color+'" stroke-width="2.5"/>';
-        svg+='<circle cx="'+x+'" cy="'+y+'" r="13" fill="transparent" stroke="transparent" tabindex="0" role="img" aria-label="'+txt(label)+'"><title>'+txt(label)+'</title></circle>';
+        svg+='<circle class="trend-hit" data-date="'+txt(p.period)+'" data-exercise="'+txt(meta?.short||serie.exerciseType)+'" data-value="'+txt(number(p.value)+(unit==='%'?'%':unit?' '+unit:''))+'" data-color="'+color+'" cx="'+x+'" cy="'+y+'" r="14" fill="transparent" stroke="transparent" tabindex="0" role="button" aria-label="'+txt(label)+'"/>';
       }
     }
-    target.innerHTML=svg+'</svg>';
+    target.innerHTML=svg+'</svg><div class="trend-tooltip" hidden><strong></strong><span></span></div>';
+    const tooltip=target.querySelector('.trend-tooltip');
+    const showPoint=point=>{
+      const bounds=target.querySelector('svg').getBoundingClientRect();
+      const x=Number(point.getAttribute('cx'))/w*bounds.width;
+      const y=Number(point.getAttribute('cy'))/h*bounds.height;
+      const [year,month,day]=point.dataset.date.split('-').map(Number);
+      tooltip.querySelector('strong').textContent=new Date(year,month-1,day).toLocaleDateString('es-GT',{day:'numeric',month:'short',year:'numeric'});
+      const value=tooltip.querySelector('span');
+      value.textContent=point.dataset.exercise+' · '+point.dataset.value;
+      value.style.color=point.dataset.color;
+      tooltip.hidden=false;
+      tooltip.style.left=Math.max(8,Math.min(bounds.width-tooltip.offsetWidth-8,x-tooltip.offsetWidth/2))+'px';
+      tooltip.style.top=Math.max(4,y-tooltip.offsetHeight-15)+'px';
+    };
+    target.querySelectorAll('.trend-hit').forEach(point=>{
+      point.addEventListener('pointerenter',()=>showPoint(point));
+      point.addEventListener('focus',()=>showPoint(point));
+      point.addEventListener('click',()=>showPoint(point));
+      point.addEventListener('pointerleave',()=>{tooltip.hidden=true;});
+      point.addEventListener('blur',()=>{tooltip.hidden=true;});
+    });
+    target.addEventListener('pointerleave',()=>{tooltip.hidden=true;});
   }
   function typeList(session){return Object.entries({aimlab:'exercises',feet_targets:'footExercises',running_direction_change:'runningExercises'}).filter(([type,key])=>session[key]?.some(x=>x.exerciseType===type)).map(([type])=>TYPES[type].short).join(', ')||'—';}
   function renderSessions(id,list,withAthlete=false){$(id).innerHTML=list.length?list.map(s=>`<tr>${withAthlete?`<td><strong>${txt(state.athleteCache.find(a=>a.id===s.athleteId)?.nombre||`#${s.athleteId}`)}</strong></td>`:''}<td>${date(s.startedAt)}</td><td>${txt(modeLabel(s.mode))}</td><td>${typeList(s)}</td><td>${duration((new Date(s.endedAt)-new Date(s.startedAt))/1000)}</td><td><button class="link-button" data-session="${txt(s.sessionId)}">Ver detalle →</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No hay sesiones para mostrar.</td></tr>';}
