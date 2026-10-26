@@ -89,7 +89,9 @@
         svg+='<circle class="trend-hit" data-date="'+txt(p.period)+'" data-exercise="'+txt(meta?.short||serie.exerciseType)+'" data-value="'+txt(number(p.value)+(unit==='%'?'%':unit?' '+unit:''))+'" data-color="'+color+'" cx="'+x+'" cy="'+y+'" r="14" fill="transparent" stroke="transparent" tabindex="0" role="button" aria-label="'+txt(label)+'"/>';
       }
     }
+    target.innerHTML=svg+'</svg>';
     attachTrendTooltip(target,w,h);
+  }
   function attachTrendTooltip(target,w,h){
     target.insertAdjacentHTML('beforeend','<div class="trend-tooltip" hidden><strong></strong><span></span></div>');
     const tooltip=target.querySelector('.trend-tooltip');
@@ -97,7 +99,7 @@
       const bounds=target.querySelector('svg').getBoundingClientRect();
       const x=Number(point.getAttribute('cx'))/w*bounds.width;
       const y=Number(point.getAttribute('cy'))/h*bounds.height;
-      const [year,month,day]=point.dataset.date.split('-').map(Number);
+      const [year,month,day]=point.dataset.date.slice(0,10).split('-').map(Number);
       tooltip.querySelector('strong').textContent=new Date(year,month-1,day).toLocaleDateString('es-GT',{day:'numeric',month:'short',year:'numeric'});
       const value=tooltip.querySelector('span');
       value.textContent=point.dataset.exercise+' · '+point.dataset.value;
