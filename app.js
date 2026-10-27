@@ -40,7 +40,7 @@
     catch { throw new ApiError(0,'No se pudo conectar con la API. Verifica Render y la configuración CORS.'); }
     let body; try { body=await response.json(); } catch { body={}; }
     if (!response.ok) {
-      if(response.status===401 && state.token) logout('La sesión caducó. Inicia sesión nuevamente.');
+      if(response.status===401 && state.token && !opts.keepSessionOn401) logout('La sesión caducó. Inicia sesión nuevamente.');
       throw new ApiError(response.status,body.message||`La API respondió HTTP ${response.status}.`);
     }
     return body;
@@ -204,7 +204,7 @@
     event.preventDefault();if(!state.resetTarget||!canManageAdmins())return;
     const button=$('reset-submit');button.disabled=true;
     try{
-      await request('/api/admin/usuarios/'+encodeURIComponent(state.resetTarget.id)+'/restablecer-password',{method:'POST',body:JSON.stringify({adminPassword:$('reset-admin-password').value})});
+      await request('/api/admin/usuarios/'+encodeURIComponent(state.resetTarget.id)+'/restablecer-password',{method:'POST',keepSessionOn401:true,body:JSON.stringify({adminPassword:$('reset-admin-password').value})});
       $('reset-dialog').close();$('reset-admin-password').value='';notice('Contraseña restablecida. El usuario deberá cambiar la contraseña temporal al ingresar.');
     }catch(e){$('reset-form-error').textContent=e.message;$('reset-form-error').classList.remove('hidden');}finally{button.disabled=false;}
   }
@@ -213,7 +213,7 @@
     if(newPassword!==confirm||newPassword===currentPassword||newPassword==='praxen01'){$('password-form-error').textContent='Verifica la confirmación y utiliza una contraseña nueva distinta de la actual y de praxen01.';$('password-form-error').classList.remove('hidden');return;}
     const button=$('password-save');button.disabled=true;
     try{
-      await request('/api/auth/change-password',{method:'POST',body:JSON.stringify({currentPassword,newPassword})});
+      await request('/api/auth/change-password',{method:'POST',keepSessionOn401:true,body:JSON.stringify({currentPassword,newPassword})});
       $('password-dialog').close();$('password-change-form').reset();logout('Contraseña actualizada. Inicia sesión nuevamente.');
     }catch(e){$('password-form-error').textContent=e.message;$('password-form-error').classList.remove('hidden');}finally{button.disabled=false;}
   }
