@@ -19,8 +19,15 @@
   const metricLabel = key => METRIC_LABELS[key] || key.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/^./,c=>c.toUpperCase());
   const modeLabel = mode => ({individual:'Individual',circuit:'Circuito',custom:'Personalizado'})[mode] || mode || '—';
   const $ = id => document.getElementById(id);
-  const state = { token:null, user:null, view:'dashboard', filters:{}, athletePage:0, athleteTotal:0, detailPage:0, detailTotal:0, adminPage:0, adminTotal:0, selected:null, athleteCache:[], recent:[], summary:null, serial:0 };
+  const state = { token:null, user:null, view:'dashboard', filters:{}, athletePage:0, athleteTotal:0, detailPage:0, detailTotal:0, adminPage:0, adminTotal:0, selected:null, athleteCache:[], recent:[], summary:null, serial:0, groups:[], groupReady:false, selectedGroup:null, groupMembers:[], users:[], userPage:0, userTotal:0, resetTarget:null };
   const number = n => typeof n === 'number' && Number.isFinite(n) ? new Intl.NumberFormat('es-GT',{ maximumFractionDigits:1 }).format(n) : '—';
+  const reactionKeys=['averageReactionSeconds','averageReactionTimeSeconds','reactionTimeSeconds','averageResponseTimeSeconds'];
+  const formatMetric=(key,value)=>typeof value==='number'&&Number.isFinite(value)?new Intl.NumberFormat('es-GT',{maximumFractionDigits:/^(hits|misses|targetsHit|targetsMissed|targetsReached|attemptsCount|sets|score)$/.test(key)?0:2}).format(value):'—';
+  const reactionMetric=summary=>{
+    const wanted=$('exercise').value;
+    const available=(summary?.exercises||[]).filter(e=>!wanted||e.exerciseType===wanted).flatMap(e=>reactionKeys.map(key=>({type:e.exerciseType,key,metric:e.metrics?.[key]})).filter(x=>typeof x.metric?.average==='number'&&Number.isFinite(x.metric.average)));
+    return available.length===1?available[0]:null;
+  };
   const date = d => d ? new Date(d).toLocaleDateString('es-GT',{ day:'2-digit',month:'short',year:'numeric' }) : '—';
   const duration = n => typeof n === 'number' && Number.isFinite(n) ? `${Math.floor(n/60)}m ${String(Math.round(n%60)).padStart(2,'0')}s` : '—';
   const txt = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -41,8 +48,9 @@
   }
   function notice(message,kind='warning') { const n=$('notice');n.textContent=message;n.classList.remove('hidden');n.style.background=kind==='error'?'#fff0f2':'#fff8e6';n.style.color=kind==='error'?'#a63b4b':'#926e21'; }
   function clearNotice(){ $('notice').classList.add('hidden'); }
+  function canManageGroups(){return state.user?.role==='superadmin';}
   function canManageAdmins(){return state.user?.role==='superadmin'&&state.user?.permissions?.includes('admins:manage');}
-  function show(view){if(view==='administrators'&&!canManageAdmins())return;state.view=view;document.querySelectorAll('.view').forEach(el=>el.classList.toggle('hidden',el.id!==view));document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));$('breadcrumb-current').textContent=({dashboard:'Resumen general',athletes:'Atletas',detail:'Perfil del atleta',compare:'Comparar resultados',administrators:'Administradores'})[view];clearNotice();window.scrollTo(0,0);}
+  function show(view){if((view==='administrators'||view==='users')&&!canManageAdmins())return;state.view=view;document.querySelectorAll('.view').forEach(el=>el.classList.toggle('hidden',el.id!==view));document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));$('breadcrumb-current').textContent=({dashboard:'Resumen general',athletes:'Atletas',detail:'Perfil del atleta',compare:'Comparar resultados',administrators:'Administradores',groups:'Grupos',users:'Gestión de usuarios'})[view];clearNotice();window.scrollTo(0,0);}
   function logout(message=''){state.token=null;state.user=null;state.serial++;$('app-view').classList.add('hidden');$('login-view').classList.remove('hidden');$('password').value='';$('login-error').textContent=message;$('login-error').classList.toggle('hidden',!message);}
   async function login(event){event.preventDefault();const button=$('login-button');button.disabled=true;$('login-error').classList.add('hidden');try{
       const payload=await request('/api/auth/login',{ method:'POST',body:JSON.stringify({username:$('username').value.trim(),password:$('password').value}) });
@@ -50,11 +58,11 @@
       state.token=payload.token;
       const verified=await request('/api/auth/me');const user=verified.user||verified;
       if(!['admin','superadmin'].includes(user.role) || !user.permissions?.includes('results:all:read')) throw new ApiError(403,'La cuenta no tiene permisos administrativos activos.');
-      state.user=user;$('side-user').textContent=user.nombre||user.username;$('user-initials').textContent=(user.nombre||'AD').split(/\s+/).slice(0,2).map(s=>s[0]).join('').toUpperCase();$('admin-nav').classList.toggle('hidden',!canManageAdmins());$('mobile-admin-nav').classList.toggle('hidden',!canManageAdmins());$('login-view').classList.add('hidden');$('app-view').classList.remove('hidden');$('password').value='';show('dashboard');await Promise.all([loadFilters(),loadAthletes()]);await loadDashboard();
+      state.user=user;$('side-user').textContent=user.nombre||user.username;$('user-initials').textContent=(user.nombre||'AD').split(/\s+/).slice(0,2).map(s=>s[0]).join('').toUpperCase();$('admin-nav').classList.toggle('hidden',!canManageAdmins());$('users-nav').classList.toggle('hidden',!canManageAdmins());$('mobile-admin-nav').classList.toggle('hidden',!canManageAdmins());$('login-view').classList.add('hidden');$('app-view').classList.remove('hidden');$('password').value='';show('dashboard');await Promise.all([loadFilters(),loadGroups(),loadAthletes()]);await loadDashboard();
     }catch(err){state.token=null;$('login-error').textContent=err.message;$('login-error').classList.remove('hidden');}finally{button.disabled=false;}}
-  function filters(){return { federacion:$('federation').value,exerciseType:$('exercise').value,from:$('date-from').value,to:$('date-to').value};}
+  function filters(){return { ...(state.groupReady&&$('group-filter').value?{groupId:$('group-filter').value}:{}),federacion:$('federation').value,exerciseType:$('exercise').value,from:$('date-from').value,to:$('date-to').value};}
   async function loadFilters(){try{const data=await request('/api/admin/federaciones');const entries=Array.isArray(data.federaciones)?data.federaciones:[];for(const id of ['federation','athlete-federation']){const sel=$(id),old=sel.value;sel.querySelectorAll('option:not(:first-child)').forEach(o=>o.remove());entries.forEach(f=>{const opt=document.createElement('option');opt.value=f.nombre;opt.textContent=`${f.nombre} (${f.totalAtletas})`;sel.append(opt)});sel.value=old;}}catch(e){notice(e.message,'error');}}
-  function renderSummary(summary){state.summary=summary;$('count-athletes').textContent=number(summary.athleteCount);$('count-sessions').textContent=number(summary.totalSessions);$('count-duration').textContent=duration(summary.averageDurationSeconds);const ex=$('exercise').value?summary.exercises.find(x=>x.exerciseType===$('exercise').value):null;const acc=ex?.metrics?.accuracyPercent?.average;$('count-precision').textContent=typeof acc==='number'?`${number(acc)}%`:'Por ejercicio';$('exercise-cards').innerHTML=Object.entries(TYPES).map(([type,meta])=>{
+  function renderSummary(summary){state.summary=summary;renderReactionKpi(summary);$('count-athletes').textContent=number(summary.athleteCount);$('count-sessions').textContent=number(summary.totalSessions);$('count-duration').textContent=duration(summary.averageDurationSeconds);const ex=$('exercise').value?summary.exercises.find(x=>x.exerciseType===$('exercise').value):null;const acc=ex?.metrics?.accuracyPercent?.average;$('count-precision').textContent=typeof acc==='number'?`${number(acc)}%`:'Por ejercicio';$('exercise-cards').innerHTML=Object.entries(TYPES).map(([type,meta])=>{
     const item=summary.exercises.find(e=>e.exerciseType===type),acc=item?.metrics?.accuracyPercent?.average,firstMetric=item?.metrics?.accuracyPercent||Object.values(item?.metrics||{})[0];const value=typeof firstMetric?.average==='number'?`${number(firstMetric.average)}${firstMetric.unit==='%'?'%':''}`:'—';const bar=firstMetric?.unit==='%'?`<div class="bar"><i style="width:${Math.max(0,Math.min(100,firstMetric.average))}%;background:${meta.color}"></i></div>`:'';
     return `<div class="exercise-row"><div class="ex-emoji">${meta.icon}</div><div class="ex-body"><strong>${meta.label}</strong><small>${item?.sessions??0} sesiones · ${txt(firstMetric?.label||'Sin métricas')}</small>${bar}</div><span class="ex-value">${value}</span></div>`;}).join('');}
   function plot(id,points,unit='',color='#4779ec'){
@@ -117,6 +125,101 @@
     });
     target.addEventListener('pointerleave',()=>{tooltip.hidden=true;});
   }
+
+  function renderReactionKpi(summary){
+    const target=$('reaction-kpi');
+    const metric=reactionMetric(summary);
+    if(!metric){target.classList.add('hidden');target.innerHTML='';return;}
+    target.classList.remove('hidden');
+    target.innerHTML='<div class="reaction-icon">◷</div><div class="reaction-copy"><strong>Tiempo medio de reacción · '+txt(TYPES[metric.type]?.label||metric.type)+'</strong><p>Promedio del ejercicio seleccionado. Un tiempo menor suele representar una respuesta más rápida.</p></div><div class="reaction-number">'+formatMetric(metric.key,metric.metric.average)+' <small>s</small></div>';
+  }
+  async function loadGroups(){
+    try{
+      const data=await request('/api/admin/grupos?limit=100');
+      if(!Array.isArray(data.grupos))throw new Error('Respuesta de grupos no reconocida.');
+      state.groups=data.grupos;state.groupReady=true;
+      $('groups-status').classList.add('hidden');$('new-group-trigger').classList.toggle('hidden',!canManageGroups());
+      const sel=$('group-filter'),old=sel.value;
+      sel.innerHTML='<option value="">Todos los grupos</option>'+state.groups.map(g=>'<option value="'+txt(g.id)+'">'+txt(g.nombre)+'</option>').join('');
+      sel.disabled=false;sel.value=state.groups.some(g=>String(g.id)===old)?old:'';
+      renderGroups();
+    }catch(e){
+      state.groupReady=false;state.groups=[];$('group-filter').disabled=true;$('group-filter').innerHTML='<option value="">Grupos no disponibles</option>';
+      $('groups-count').textContent='—';$('new-group-trigger').classList.add('hidden');
+      $('groups-list').innerHTML='<div class="empty">El listado de grupos estará disponible cuando la API habilite su administración.</div>';
+      $('groups-status').classList.remove('hidden');$('groups-status').textContent='La interfaz de grupos está preparada, pero la API todavía no ofrece este servicio. Ningún filtro por grupo se aplicará hasta que esté disponible.';
+    }
+  }
+  function renderGroups(){
+    const term=$('group-search').value.trim().toLowerCase();
+    const matches=state.groups.filter(g=>(g.nombre+' '+(g.descripcion||'')).toLowerCase().includes(term));
+    $('groups-count').textContent=number(state.groups.length);
+    $('groups-list').innerHTML=matches.map(g=>'<button type="button" class="group-tile" data-open-group="'+txt(g.id)+'"><div class="group-tile-head"><span class="group-tile-icon">◫</span><span class="account-badge">Natación</span></div><h3>'+txt(g.nombre)+'</h3><p>'+txt(g.descripcion||'Sin descripción')+'</p><div class="group-tile-footer"><span>'+txt(g.totalUsuarios??g.totalAtletas??'—')+' integrantes</span><b>Ver integrantes →</b></div></button>').join('')||'<div class="empty">No se encontraron grupos.</div>';
+  }
+  async function openGroup(id){
+    const group=state.groups.find(g=>String(g.id)===String(id));if(!group)return;
+    state.selectedGroup=group;
+    $('group-detail-name').textContent=group.nombre;$('group-detail-description').textContent=group.descripcion||'Sin descripción';
+    $('group-detail').classList.remove('hidden');$('group-edit').classList.toggle('hidden',!canManageGroups());$('group-delete').classList.toggle('hidden',!canManageGroups());$('group-add-user').classList.toggle('hidden',!canManageGroups());
+    $('group-members').innerHTML='<tr><td colspan="4" class="empty">Cargando integrantes…</td></tr>';
+    try{
+      const data=await request('/api/admin/grupos/'+encodeURIComponent(id)+'/usuarios');
+      state.groupMembers=Array.isArray(data.usuarios)?data.usuarios:[];
+      renderGroupMembers();
+    }catch(e){$('group-members').innerHTML='<tr><td colspan="4" class="empty">'+txt(e.message)+'</td></tr>';}
+    $('group-detail').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  function renderGroupMembers(){
+    const term=$('group-user-search').value.trim().toLowerCase();
+    const rows=state.groupMembers.filter(u=>(u.nombre+' '+(u.username||'')).toLowerCase().includes(term));
+    $('group-members').innerHTML=rows.map(u=>'<tr><td><strong>'+txt(u.nombre)+'</strong></td><td>@'+txt(u.username||'—')+'</td><td>'+date(u.assignedAt||u.assigned_at)+'</td><td>'+(canManageGroups()?'<button class="link-button" data-unassign="'+txt(u.id)+'">Quitar</button>':'—')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty">No hay deportistas que coincidan.</td></tr>';
+  }
+  async function groupMutation(path,opts){
+    try{await request(path,opts);await loadGroups();if(state.selectedGroup){const id=state.selectedGroup.id;if(state.groups.some(g=>String(g.id)===String(id)))await openGroup(id);else{$('group-detail').classList.add('hidden');state.selectedGroup=null;}}notice('Cambios guardados correctamente.');return true;}
+    catch(e){notice(e.message,'error');return false;}
+  }
+  async function saveGroup(event){
+    event.preventDefault();if(!canManageGroups()||!state.groupReady)return;
+    const nombre=$('group-name').value.trim(),descripcion=$('group-description').value.trim();
+    if(nombre.length<2){notice('Indica un nombre de grupo de al menos 2 caracteres.','error');return;}
+    const editing=$('group-form').dataset.editing,button=$('group-save');button.disabled=true;
+    const ok=await groupMutation('/api/admin/grupos'+(editing?'/'+encodeURIComponent(editing):''),{method:editing?'PATCH':'POST',body:JSON.stringify({nombre,descripcion})});
+    button.disabled=false;if(ok)$('group-dialog').close();
+  }
+  async function loadUsers(){
+    if(!canManageAdmins())return;
+    try{
+      const data=await request('/api/admin/usuarios'+qs({limit:25,offset:state.userPage*25,search:$('users-search').value.trim(),role:$('users-role').value}));
+      if(!Array.isArray(data.usuarios))throw new Error('Respuesta de usuarios no reconocida.');
+      state.users=data.usuarios;state.userTotal=data.total??data.usuarios.length;
+      $('users-status').classList.add('hidden');$('users-total').textContent=state.userTotal+' cuentas';
+      $('users-body').innerHTML=state.users.map(u=>'<tr><td><strong>'+txt(u.nombre)+'</strong><div class="status-note">@'+txt(u.username)+'</div></td><td><span class="account-badge">'+txt(({athlete:'Deportista',admin:'Administrador',superadmin:'Super Admin'})[u.role]||u.role)+'</span></td><td><span class="status-chip '+(u.isActive===false?'off':'')+'">'+(u.isActive===false?'Inactivo':'Activo')+'</span></td><td>'+(u.role!=='superadmin'&&u.id!==state.user.id?'<button class="link-button" data-reset-user="'+txt(u.id)+'">Restablecer contraseña</button>':'<span class="status-note">Cuenta protegida</span>')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty">No se encontraron cuentas.</td></tr>';
+      $('users-prev').disabled=state.userPage===0;$('users-next').disabled=(state.userPage+1)*25>=state.userTotal;
+    }catch(e){$('users-status').classList.remove('hidden');$('users-status').textContent='La gestión de usuarios requiere los endpoints administrativos del backend. No se han modificado cuentas.';$('users-body').innerHTML='<tr><td colspan="4" class="empty">Gestión de usuarios pendiente de API.</td></tr>';$('users-total').textContent='—';}
+  }
+  function openReset(id){
+    const user=state.users.find(u=>String(u.id)===String(id));
+    if(!canManageAdmins()||!user||user.role==='superadmin'||user.id===state.user.id)return;
+    state.resetTarget=user;$('reset-target').textContent='Cuenta: '+user.nombre+' (@'+user.username+')';$('reset-admin-password').value='';$('reset-form-error').classList.add('hidden');$('reset-dialog').showModal();
+  }
+  async function resetPassword(event){
+    event.preventDefault();if(!state.resetTarget||!canManageAdmins())return;
+    const button=$('reset-submit');button.disabled=true;
+    try{
+      await request('/api/admin/usuarios/'+encodeURIComponent(state.resetTarget.id)+'/restablecer-password',{method:'POST',body:JSON.stringify({adminPassword:$('reset-admin-password').value})});
+      $('reset-dialog').close();$('reset-admin-password').value='';notice('Contraseña restablecida. El usuario deberá cambiar la contraseña temporal al ingresar.');
+    }catch(e){$('reset-form-error').textContent=e.message;$('reset-form-error').classList.remove('hidden');}finally{button.disabled=false;}
+  }
+  async function changeOwnPassword(event){
+    event.preventDefault();const currentPassword=$('current-password').value,newPassword=$('next-password').value,confirm=$('confirm-password').value;
+    if(newPassword!==confirm||newPassword===currentPassword||newPassword==='praxen01'){$('password-form-error').textContent='Verifica la confirmación y utiliza una contraseña nueva distinta de la actual y de praxen01.';$('password-form-error').classList.remove('hidden');return;}
+    const button=$('password-save');button.disabled=true;
+    try{
+      await request('/api/auth/change-password',{method:'POST',body:JSON.stringify({currentPassword,newPassword})});
+      $('password-dialog').close();$('password-change-form').reset();logout('Contraseña actualizada. Inicia sesión nuevamente.');
+    }catch(e){$('password-form-error').textContent=e.message;$('password-form-error').classList.remove('hidden');}finally{button.disabled=false;}
+  }
+
   function typeList(session){return Object.entries({aimlab:'exercises',feet_targets:'footExercises',running_direction_change:'runningExercises'}).filter(([type,key])=>session[key]?.some(x=>x.exerciseType===type)).map(([type])=>TYPES[type].short).join(', ')||'—';}
   function renderSessions(id,list,withAthlete=false){$(id).innerHTML=list.length?list.map(s=>`<tr>${withAthlete?`<td><strong>${txt(state.athleteCache.find(a=>a.id===s.athleteId)?.nombre||`#${s.athleteId}`)}</strong></td>`:''}<td>${date(s.startedAt)}</td><td>${txt(modeLabel(s.mode))}</td><td>${typeList(s)}</td><td>${duration((new Date(s.endedAt)-new Date(s.startedAt))/1000)}</td><td><button class="link-button" data-session="${txt(s.sessionId)}">Ver detalle →</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No hay sesiones para mostrar.</td></tr>';}
   async function loadDashboard(){const serial=++state.serial;const query=qs(filters());$('count-sessions').textContent='…';try{
