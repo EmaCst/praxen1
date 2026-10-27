@@ -19,15 +19,14 @@
   const metricLabel = key => METRIC_LABELS[key] || key.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/^./,c=>c.toUpperCase());
   const modeLabel = mode => ({individual:'Individual',circuit:'Circuito',custom:'Personalizado'})[mode] || mode || '—';
   const $ = id => document.getElementById(id);
-  const state = { token:null, user:null, view:'dashboard', filters:{}, athletePage:0, athleteTotal:0, detailPage:0, detailTotal:0, adminPage:0, adminTotal:0, selected:null, athleteCache:[], recent:[], summary:null, serial:0, groups:[], groupReady:false, selectedGroup:null, groupMembers:[], users:[], userPage:0, userTotal:0, resetTarget:null };
+  const state = { token:null, user:null, view:'dashboard', filters:{}, athletePage:0, athleteTotal:0, detailPage:0, detailTotal:0, adminPage:0, adminTotal:0, selected:null, athleteCache:[], recent:[], summary:null, serial:0, groups:[], groupReady:false, groupAnalyticsReady:false, selectedGroup:null, groupMembers:[], users:[], userPage:0, userTotal:0, resetTarget:null };
   const number = n => typeof n === 'number' && Number.isFinite(n) ? new Intl.NumberFormat('es-GT',{ maximumFractionDigits:1 }).format(n) : '—';
   const reactionKeys=['averageReactionSeconds','averageReactionTimeSeconds','reactionTimeSeconds','averageResponseTimeSeconds'];
   const formatMetric=(key,value)=>typeof value==='number'&&Number.isFinite(value)?new Intl.NumberFormat('es-GT',{maximumFractionDigits:/^(hits|misses|targetsHit|targetsMissed|targetsReached|attemptsCount|sets|score)$/.test(key)?0:2}).format(value):'—';
-  const reactionMetric=summary=>{
-    const wanted=$('exercise').value;
-    const available=(summary?.exercises||[]).filter(e=>!wanted||e.exerciseType===wanted).flatMap(e=>reactionKeys.map(key=>({type:e.exerciseType,key,metric:e.metrics?.[key]})).filter(x=>typeof x.metric?.average==='number'&&Number.isFinite(x.metric.average)));
-    return available.length===1?available[0]:null;
-  };
+  const reactionMetrics=summary=>(summary?.exercises||[]).filter(e=>!$('exercise').value||e.exerciseType===$('exercise').value).map(e=>{
+    const key=reactionKeys.find(k=>typeof e.metrics?.[k]?.average==='number'&&Number.isFinite(e.metrics[k].average));
+    return key?{type:e.exerciseType,key,metric:e.metrics[key]}:null;
+  }).filter(Boolean);
   const date = d => d ? new Date(d).toLocaleDateString('es-GT',{ day:'2-digit',month:'short',year:'numeric' }) : '—';
   const duration = n => typeof n === 'number' && Number.isFinite(n) ? `${Math.floor(n/60)}m ${String(Math.round(n%60)).padStart(2,'0')}s` : '—';
   const txt = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -60,7 +59,7 @@
       if(!['admin','superadmin'].includes(user.role) || !user.permissions?.includes('results:all:read')) throw new ApiError(403,'La cuenta no tiene permisos administrativos activos.');
       state.user=user;$('side-user').textContent=user.nombre||user.username;$('user-initials').textContent=(user.nombre||'AD').split(/\s+/).slice(0,2).map(s=>s[0]).join('').toUpperCase();$('admin-nav').classList.toggle('hidden',!canManageAdmins());$('users-nav').classList.toggle('hidden',!canManageAdmins());$('mobile-admin-nav').classList.toggle('hidden',!canManageAdmins());$('login-view').classList.add('hidden');$('app-view').classList.remove('hidden');$('password').value='';show('dashboard');await Promise.all([loadFilters(),loadGroups(),loadAthletes()]);await loadDashboard();
     }catch(err){state.token=null;$('login-error').textContent=err.message;$('login-error').classList.remove('hidden');}finally{button.disabled=false;}}
-  function filters(){return { ...(state.groupReady&&$('group-filter').value?{groupId:$('group-filter').value}:{}),federacion:$('federation').value,exerciseType:$('exercise').value,from:$('date-from').value,to:$('date-to').value};}
+  function filters(){return { ...(state.groupAnalyticsReady&&$('group-filter').value?{groupId:$('group-filter').value}:{}),federacion:$('federation').value,exerciseType:$('exercise').value,from:$('date-from').value,to:$('date-to').value};}
   async function loadFilters(){try{const data=await request('/api/admin/federaciones');const entries=Array.isArray(data.federaciones)?data.federaciones:[];for(const id of ['federation','athlete-federation']){const sel=$(id),old=sel.value;sel.querySelectorAll('option:not(:first-child)').forEach(o=>o.remove());entries.forEach(f=>{const opt=document.createElement('option');opt.value=f.nombre;opt.textContent=`${f.nombre} (${f.totalAtletas})`;sel.append(opt)});sel.value=old;}}catch(e){notice(e.message,'error');}}
   function renderSummary(summary){state.summary=summary;renderReactionKpi(summary);$('count-athletes').textContent=number(summary.athleteCount);$('count-sessions').textContent=number(summary.totalSessions);$('count-duration').textContent=duration(summary.averageDurationSeconds);const ex=$('exercise').value?summary.exercises.find(x=>x.exerciseType===$('exercise').value):null;const acc=ex?.metrics?.accuracyPercent?.average;$('count-precision').textContent=typeof acc==='number'?`${number(acc)}%`:'Por ejercicio';$('exercise-cards').innerHTML=Object.entries(TYPES).map(([type,meta])=>{
     const item=summary.exercises.find(e=>e.exerciseType===type),acc=item?.metrics?.accuracyPercent?.average,firstMetric=item?.metrics?.accuracyPercent||Object.values(item?.metrics||{})[0];const value=typeof firstMetric?.average==='number'?`${number(firstMetric.average)}${firstMetric.unit==='%'?'%':''}`:'—';const bar=firstMetric?.unit==='%'?`<div class="bar"><i style="width:${Math.max(0,Math.min(100,firstMetric.average))}%;background:${meta.color}"></i></div>`:'';
@@ -127,24 +126,23 @@
   }
 
   function renderReactionKpi(summary){
-    const target=$('reaction-kpi');
-    const metric=reactionMetric(summary);
-    if(!metric){target.classList.add('hidden');target.innerHTML='';return;}
+    const target=$('reaction-kpi'),metrics=reactionMetrics(summary);
+    if(!metrics.length){target.classList.add('hidden');target.innerHTML='';return;}
     target.classList.remove('hidden');
-    target.innerHTML='<div class="reaction-icon">◷</div><div class="reaction-copy"><strong>Tiempo medio de reacción · '+txt(TYPES[metric.type]?.label||metric.type)+'</strong><p>Promedio del ejercicio seleccionado. Un tiempo menor suele representar una respuesta más rápida.</p></div><div class="reaction-number">'+formatMetric(metric.key,metric.metric.average)+' <small>s</small></div>';
+    target.innerHTML='<div class="reaction-icon">◷</div><div class="reaction-copy"><strong>Tiempo medio de reacción</strong><p>Por ejercicio, sin mezclar modalidades. Menor tiempo indica una respuesta más rápida.</p></div><div class="reaction-values">'+metrics.map(m=>'<span><small>'+txt(TYPES[m.type]?.short||m.type)+'</small><b>'+formatMetric(m.key,m.metric.average)+' s</b></span>').join('')+'</div>';
   }
   async function loadGroups(){
     try{
       const data=await request('/api/admin/grupos?limit=100');
       if(!Array.isArray(data.grupos))throw new Error('Respuesta de grupos no reconocida.');
-      state.groups=data.grupos;state.groupReady=true;
+      state.groups=data.grupos;state.groupReady=true;state.groupAnalyticsReady=data.supportsAnalyticsFilter===true;
       $('groups-status').classList.add('hidden');$('new-group-trigger').classList.toggle('hidden',!canManageGroups());
       const sel=$('group-filter'),old=sel.value;
       sel.innerHTML='<option value="">Todos los grupos</option>'+state.groups.map(g=>'<option value="'+txt(g.id)+'">'+txt(g.nombre)+'</option>').join('');
-      sel.disabled=false;sel.value=state.groups.some(g=>String(g.id)===old)?old:'';
+      sel.disabled=!state.groupAnalyticsReady;sel.value=state.groupAnalyticsReady&&state.groups.some(g=>String(g.id)===old)?old:'';sel.title=state.groupAnalyticsReady?'Filtrar resultados por grupo':'Pendiente: la API debe admitir groupId en las consultas de resultados.';
       renderGroups();
     }catch(e){
-      state.groupReady=false;state.groups=[];$('group-filter').disabled=true;$('group-filter').innerHTML='<option value="">Grupos no disponibles</option>';
+      state.groupReady=false;state.groupAnalyticsReady=false;state.groups=[];$('group-filter').disabled=true;$('group-filter').innerHTML='<option value="">Grupos no disponibles</option>';
       $('groups-count').textContent='—';$('new-group-trigger').classList.add('hidden');
       $('groups-list').innerHTML='<div class="empty">El listado de grupos estará disponible cuando la API habilite su administración.</div>';
       $('groups-status').classList.remove('hidden');$('groups-status').textContent='La interfaz de grupos está preparada, pero la API todavía no ofrece este servicio. Ningún filtro por grupo se aplicará hasta que esté disponible.';
