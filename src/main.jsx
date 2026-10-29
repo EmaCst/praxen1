@@ -3,7 +3,7 @@ import {createRoot} from 'react-dom/client';
 import {LayoutDashboard,Users,GitCompareArrows,ShieldCheck,Layers,UserCog,LogOut,KeyRound,RefreshCw,Download,Search,Menu,X,ChevronRight,ChevronLeft,Activity,Clock3,Target,CalendarDays,AlertCircle,CheckCircle2,Plus,Trash2,Edit2,UserPlus,Volume2,ArrowUpRight,Eye,EyeOff} from 'lucide-react';
 import {api,qs} from './api';
 import {TYPES,num,date,duration,mode,exerciseNames,summaryReaction,metricMap,downloadCSV} from './lib';
-import './styles.css';
+import '../styles.css';
 
 const NAV=[['dashboard','Resumen',LayoutDashboard],['athletes','Atletas',Users],['compare','Comparar',GitCompareArrows],['groups','Grupos',Layers],['users','Usuarios',UserCog],['administrators','Administradores',ShieldCheck]];
 const EMPTY='No hay información disponible para estos filtros.';
