@@ -35,7 +35,7 @@ export function SparkLines({series=[]}){
   const y=value=>top+(height-top-bottom)-(value-min)*(height-top-bottom)/range;
   const labelPeriod=period=>{const parsed=new Date(period+'T12:00:00');return Number.isNaN(parsed.getTime())?period:parsed.toLocaleDateString('es-GT',{day:'numeric',month:'short',year:'numeric'});};
   const formatValue=(p,s)=>num(p.value)+(s.metric?.unit==='%'?'%':s.metric?.unit?' '+s.metric.unit:'');
-  return <div className="chart" onPointerLeave={()=>setSelected(null)}>
+  return <div className="chart" onPointerLeave={e=>{if(e.pointerType==='mouse')setSelected(null)}}>
     <div className="chart-stage">
       <svg role="img" aria-label="Evolución de resultados, selecciona o toca un punto para ver sus datos" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
         {[0,1,2,3,4].map(i=>{const v=max-range*i/4,yy=top+(height-top-bottom)*i/4;return <g key={i}><line x1={left} y1={yy} x2={width-right} y2={yy} stroke="#e7edf5" strokeDasharray="4 6"/><text x={left-10} y={yy+4} textAnchor="end" fontSize="10" fill="#8293aa">{num(v)}</text></g>})}
