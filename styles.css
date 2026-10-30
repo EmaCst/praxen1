@@ -63,3 +63,49 @@ html{overflow-x:hidden}
   .panel{padding:14px}
   .table-scroll tbody td::before{flex-basis:39%}
 }
+
+
+/* Identidad Praxen: tono azul para la navegación y el encabezado */
+.brand-logo{width:39px;height:39px;object-fit:contain;border-radius:10px;flex:0 0 auto;box-shadow:0 4px 14px rgba(40,91,194,.14)}
+.brand.large .brand-logo{width:45px;height:45px;background:#fff;padding:3px}
+.login-mini-brand .brand-logo{width:36px;height:36px}
+.praxen-loading-logo{width:60px;height:60px;object-fit:contain}
+.sidebar{background:linear-gradient(180deg,#eff4ff 0%,#fff 37%,#fff 100%);border-right:1px solid #dce6f8}
+.topbar{background:linear-gradient(96deg,#eef4ff 0%,#f8faff 52%,#fff 100%);border-bottom:1px solid #dce6f8}
+.workspace-tag{border-color:#dce6fa;background:#f5f8ff}
+.nav-link.active{background:#e1eaff;color:#2e58c7}
+.nav-link.active svg{stroke-width:2.5}
+.brand-dot{color:#3064db}
+.topbar .breadcrumb strong{color:#25498f}
+.stat-card{border-top:3px solid #e8eeff}
+.stat-card:nth-child(1){border-top-color:#537cf0}
+.stat-card:nth-child(2){border-top-color:#18aeb4}
+.stat-card:nth-child(3){border-top-color:#8d92e8}
+.stat-card:nth-child(4){border-top-color:#eeaa58}
+.group-card.selected{box-shadow:0 10px 30px #4d73e81a}
+.period-selector{display:inline-flex;padding:4px;border:1px solid #e1e8f6;background:#f3f6fd;border-radius:10px;flex:0 0 auto}
+.period-selector button{border:0;padding:8px 11px;border-radius:7px;color:#6a80a7;background:transparent;font-size:11px;font-weight:800}
+.period-selector button.active{background:#466bdd;color:white;box-shadow:0 3px 10px #466bdd22}
+.chart-stage{position:relative}
+.chart-stage svg{width:100%;height:auto;max-height:330px;aspect-ratio:820/260;touch-action:pan-y}
+.chart-stage .trend-hit{cursor:crosshair;outline:none}
+.chart-stage .trend-hit:focus-visible{stroke:#2846a6;stroke-width:2}
+.trend-tooltip{pointer-events:none;position:absolute;z-index:4;transform:translate(-50%,-100%);min-width:138px;padding:10px 12px;display:grid;gap:4px;background:#fff;border:1px solid #dce5f7;border-radius:10px;box-shadow:0 12px 30px #1e377e2e;white-space:nowrap;font-size:11px;color:#2a4265}
+.trend-tooltip strong{font-size:11px}
+.trend-tooltip span{font-weight:800}
+.athlete-row{cursor:pointer;transition:background-color .12s ease}
+.athlete-row:hover,.athlete-row:focus-visible{background:#f0f5ff!important;outline:2px solid #91adfb;outline-offset:-2px}
+.athlete-row .link-action{pointer-events:auto}
+@media(max-width:740px){
+  .sidebar{background:linear-gradient(180deg,#e8f0ff 0%,#fff 43%)}
+  .topbar{background:#edf3ff}
+  .brand-logo{width:36px;height:36px}
+  .period-selector{width:100%}
+  .period-selector button{flex:1}
+  .chart-stage svg{max-height:none;aspect-ratio:820/320}
+  .trend-tooltip{font-size:10px;min-width:110px;padding:8px;max-width:180px;white-space:normal}
+  .athlete-row{touch-action:manipulation}
+  .chart-legend{gap:8px 12px}
+  .chart-legend>div{font-size:10px}
+  .panel-head:has(.period-selector){display:grid;grid-template-columns:1fr;gap:10px}
+}
