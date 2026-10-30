@@ -109,3 +109,19 @@ html{overflow-x:hidden}
   .chart-legend>div{font-size:10px}
   .panel-head:has(.period-selector){display:grid;grid-template-columns:1fr;gap:10px}
 }
+
+/* Vista individual del deportista */
+.my-profile-strip{display:flex;align-items:center;gap:15px;margin-bottom:22px;padding:18px 22px;border:1px solid #dae5ff;border-radius:14px;background:linear-gradient(115deg,#eaf1ff,#fff);min-width:0}
+.my-profile-avatar{width:49px;height:49px;border-radius:13px;background:#d8e6ff;display:grid;place-items:center;color:#416cda;flex:0 0 auto}
+.my-profile-strip>div:nth-child(2){min-width:0;flex:1;display:grid;gap:5px}
+.my-profile-strip strong{font-size:15px;color:#243e6a}
+.my-profile-strip span:not(.pill){font-size:11px;color:#8191a7;overflow-wrap:anywhere}
+.my-latest{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.my-latest>div{display:grid;gap:7px;border:1px solid #e6ecf5;border-radius:12px;padding:16px}
+.my-latest>div span{font-size:11px;color:#8191a7}
+.my-latest>div strong{font-size:13px;color:#253d61;overflow-wrap:anywhere}
+.last-session-value{font-size:18px!important}
+.my-privacy{display:flex;gap:8px;align-items:flex-start;font-size:11px}
+.my-privacy svg{flex:0 0 auto}
+@media(max-width:740px){.my-latest{grid-template-columns:repeat(2,minmax(0,1fr))}.my-profile-strip{padding:14px}.my-profile-strip .pill{display:none}.my-profile-strip strong{font-size:13px}}
+@media(max-width:390px){.my-latest{grid-template-columns:1fr 1fr;gap:8px}.my-latest>div{padding:12px}.my-profile-strip{gap:10px}}
