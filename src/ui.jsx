@@ -9,7 +9,17 @@ export function Empty({children=EMPTY}){return <div className="empty-state"><Act
 export function ErrorBanner({message,onDismiss}){return message&&<div role="alert" className="notice error"><AlertCircle size={18}/><span>{message}</span>{onDismiss&&<button aria-label="Cerrar alerta" onClick={onDismiss}><X size={17}/></button>}</div>;}
 export function Modal({title,children,onClose}){return <div className="modal-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)onClose();}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><div className="modal-header"><h2>{title}</h2><button className="icon-button" onClick={onClose} aria-label="Cerrar"><X size={20}/></button></div><div className="modal-content">{children}</div></section></div>;}
 export function Pager({page,total,size,onPage}){const pages=Math.max(1,Math.ceil(total/size));return <div className="pager"><span>{total} resultados · Página {page+1} de {pages}</span><div><Button icon={ChevronLeft} disabled={page===0} onClick={()=>onPage(page-1)}>Anterior</Button><Button disabled={(page+1)*size>=total} onClick={()=>onPage(page+1)}>Siguiente <ChevronRight size={15}/></Button></div></div>;}
-export function Table({headers,children,empty=false}){return <div className="table-scroll"><table><thead><tr>{headers.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{empty?<tr><td colSpan={headers.length}><Empty/></td></tr>:children}</tbody></table></div>;}
+export function Table({headers,children,empty=false}){
+  const rows=React.Children.map(children,row=>{
+    if(!React.isValidElement(row)||row.type!=='tr')return row;
+    const cells=React.Children.map(row.props.children,(cell,i)=>{
+      if(!React.isValidElement(cell)||cell.type!=='td')return cell;
+      return React.cloneElement(cell,{'data-label':headers[i]||''});
+    });
+    return React.cloneElement(row,{},cells);
+  });
+  return <div className="table-scroll"><table><thead><tr>{headers.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{empty?<tr><td colSpan={headers.length}><Empty/></td></tr>:rows}</tbody></table></div>;
+}
 export function Badge({children,tone=''}){return <span className={'pill '+tone}>{children}</span>;}
 export function SessionsTable({sessions=[],athletes=[],onOpen,withAthlete=false}){const names=new Map(athletes.map(a=>[Number(a.id),a.nombre]));return <Table headers={[...(withAthlete?['Atleta']:[]),'Fecha','Modalidad','Ejercicios','Duración','']} empty={!sessions.length}>{sessions.map(s=><tr key={s.sessionId}>{withAthlete&&<td className="strong">{names.get(Number(s.athleteId))||'Atleta #'+s.athleteId}</td>}<td>{date(s.startedAt)}</td><td><Badge>{mode(s.mode)}</Badge></td><td>{exerciseNames(s)}</td><td>{duration((new Date(s.endedAt)-new Date(s.startedAt))/1000)}</td><td><button className="link-action" onClick={()=>onOpen(s.sessionId)}>Ver detalle <ArrowUpRight size={15}/></button></td></tr>)}</Table>;}
 export function ExerciseCards({summary}){return <div className="exercise-grid">{Object.entries(TYPES).map(([type,meta])=>{const ex=summary?.exercises?.find(e=>e.exerciseType===type);const first=ex?.metrics?.accuracyPercent||Object.values(ex?.metrics||{})[0];return <article className="exercise-card" key={type}><div className="ex-icon" style={{background:meta.color+'19'}}>{meta.icon}</div><div className="ex-info"><strong>{meta.label}</strong><small>{ex?.sessions??0} sesiones</small><span>{first?.label||'Sin métricas registradas'}</span></div><div className="ex-number">{Number.isFinite(first?.average)?num(first.average)+(first.unit==='%'?'%':''):'—'}</div>{first?.unit==='%'&&<div className="meter"><span style={{width:Math.max(0,Math.min(100,first.average))+'%',background:meta.color}}/></div>}</article>})}</div>;}
