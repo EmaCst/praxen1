@@ -194,3 +194,15 @@ html{overflow-x:hidden}
 .association-info-grid span{font-size:11px;line-height:1.6;color:#8292a8}
 @media(max-width:1050px){.association-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.association-info-grid{grid-template-columns:1fr}}
 @media(max-width:740px){.association-title{align-items:flex-start}.association-title>.button{width:100%;justify-content:center}.association-stats{gap:9px}.association-stats>div{padding:14px 12px;gap:9px}.association-stats strong{font-size:20px}.association-stats span{font-size:9px;gap:5px}.association-grid{grid-template-columns:1fr}.association-context{grid-template-columns:1fr;gap:13px}.association-context .field{width:100%}.association-detail-strip{flex-wrap:wrap;gap:10px}.association-detail-strip>.pill{margin-left:auto}.association-strip-actions{width:100%;margin:5px 0 0}.association-strip-actions .button{flex:1;justify-content:center}.association-info-grid{grid-template-columns:1fr}.association-card-actions>.button{font-size:11px}}
+
+
+/* Association-aware analytics workspace */
+.association-scope-control{display:flex;align-items:center;gap:8px;white-space:nowrap;color:#8090a4;font-size:10px;font-weight:800}
+.association-scope-control select{max-width:230px;min-width:145px;border:1px solid var(--line);border-radius:9px;padding:8px 28px 8px 10px;background:#fff;color:#405572;font:600 11px inherit;outline:none}
+.association-scope-control select:focus{border-color:#6c8fbd;box-shadow:0 0 0 3px rgba(108,143,189,.12)}
+.association-scope-pill{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid #e7ecf1;border-radius:30px;padding:7px 11px;color:#526985;background:#f8fafc;font-size:10px;font-weight:800}
+.association-context-state{min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:35px 22px;border:1px solid var(--line);border-radius:16px;background:#fff;text-align:center;color:#718198}
+.association-context-state h2{margin:0;color:#344b68;font-size:20px}
+.association-context-state p{max-width:520px;margin:0;line-height:1.6;font-size:13px}
+@media(max-width:1050px){.topbar-right{gap:10px}.association-scope-control span{display:none}.association-scope-control select{max-width:175px;min-width:125px}}
+@media(max-width:640px){.topbar-right{gap:7px}.association-scope-control select{max-width:132px;min-width:105px;padding:7px 20px 7px 7px;font-size:10px}.association-scope-pill{max-width:115px;padding:6px 8px}.live-pill{display:none}}
