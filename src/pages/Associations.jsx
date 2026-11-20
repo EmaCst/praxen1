@@ -6,7 +6,7 @@ import {Button,Field,Panel,Empty,ErrorBanner,Modal,Badge,Table} from '../ui';
 const slugify=value=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,80);
 const messageFor=error=>error?.message||'No se pudo completar la operación.';
 
-export default function Associations({call,currentUser,notify}){
+export default function Associations({call,currentUser,notify,onContextUpdated}){
   const superadmin=currentUser?.role==='superadmin';
   const [associations,setAssociations]=useState([]);
   const [context,setContext]=useState(null);
@@ -117,6 +117,7 @@ export default function Associations({call,currentUser,notify}){
     try{
       const result=await call('/api/admin/contexto-asociacion',{method:'PUT',body:{associationId}});
       setContext({...context,activeAssociationId:associationId,requiresSelection:false});
+      onContextUpdated?.(associationId,result.activeAssociation?.name);
       notify('Ahora estás trabajando en '+(result.activeAssociation?.name||'la asociación seleccionada')+'.');
       setRefresh(value=>value+1);
     }catch(e){setError(messageFor(e));}
