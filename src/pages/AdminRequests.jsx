@@ -110,7 +110,7 @@ export default function AdminRequests({call,currentUser,associationContext,assoc
       {superadmin&&<Panel title={activeAdmins===0?'Asignar primer administrador':'Solicitar incorporación'} subtitle={activeAdmins===0?'La asociación no tiene administradores activos. La asignación inicial se realizará directamente.':'La solicitud quedará pendiente hasta que un administrador actual la apruebe.'}>
         <form className="stack" onSubmit={submitRequest}>
           <Field label="Cuenta de administrador"><select required value={candidateId} onChange={event=>setCandidateId(event.target.value)}><option value="">Seleccionar cuenta…</option>{candidates.map(item=><option key={item.id} value={item.id}>{item.nombre} · @{item.username}</option>)}</select></Field>
-          <Button type="submit" variant="primary" loading={busyId==='create'} icon={Send}>{activeAdmins===0?'Asignar primer administrador':'Enviar solicitud'}</Button>
+          <Button type="submit" variant="primary" loading={busyId==='create'} disabled={loading||!candidateId} icon={Send}>{activeAdmins===0?'Asignar primer administrador':'Enviar solicitud'}</Button>
         </form>
       </Panel>}
       <Panel title="Solicitudes pendientes" subtitle={pending.length+' pendiente(s)'} action={<Button icon={RefreshCw} onClick={()=>setRefresh(value=>value+1)} loading={loading}>Actualizar</Button>}>
