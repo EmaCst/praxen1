@@ -13,6 +13,7 @@ export default function Associations({call,currentUser,notify,onContextUpdated})
   const [selected,setSelected]=useState(null);
   const [administrators,setAdministrators]=useState([]);
   const [availableAdmins,setAvailableAdmins]=useState([]);
+  const [pendingAdminIds,setPendingAdminIds]=useState([]);
   const [search,setSearch]=useState('');
   const [loading,setLoading]=useState(true);
   const [detailLoading,setDetailLoading]=useState(false);
@@ -85,8 +86,12 @@ export default function Associations({call,currentUser,notify,onContextUpdated})
   }
   async function loadAvailableAdmins(){
     try{
-      const result=await call('/api/admin/administradores'+qs({limit:100,offset:0}));
+      const [result,requests]=await Promise.all([
+        call('/api/admin/administradores'+qs({limit:100,offset:0})),
+        call('/api/admin/asociaciones/'+selected.id+'/solicitudes-administrador'+qs({status:'pending',limit:100}))
+      ]);
       setAvailableAdmins((result.administradores||[]).filter(item=>item.role==='admin'&&item.isActive!==false));
+      setPendingAdminIds((requests.solicitudes||[]).map(item=>Number(item.target?.id)));
     }catch(e){setError(messageFor(e));}
   }
   async function startAssign(){
@@ -132,7 +137,7 @@ export default function Associations({call,currentUser,notify,onContextUpdated})
   const currentAssociation=associations.find(item=>Number(item.id)===Number(context?.activeAssociationId));
   const activeAdminCount=administrators.filter(item=>item.membershipActive&&item.isActive!==false).length;
   const assignedIds=new Set(administrators.filter(item=>item.membershipActive&&item.isActive!==false).map(item=>Number(item.id)));
-  const candidates=availableAdmins.filter(item=>!assignedIds.has(Number(item.id)));
+  const candidates=availableAdmins.filter(item=>!assignedIds.has(Number(item.id))&&!pendingAdminIds.includes(Number(item.id)));
 
   if(selected&&superadmin){
     return <div className="association-page">
