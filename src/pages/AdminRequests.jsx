@@ -56,7 +56,8 @@ export default function AdminRequests({call,currentUser,associationContext,assoc
         const rows=adminData.administradores||[];
         setAdmins(rows);
         const assigned=new Set(rows.filter(item=>item.membershipActive&&item.isActive!==false).map(item=>Number(item.id)));
-        setCandidates((accountData.administradores||[]).filter(item=>item.role==='admin'&&item.isActive!==false&&!assigned.has(Number(item.id))));
+        const pending=new Set((requestData.solicitudes||[]).filter(item=>item.status==='pending').map(item=>Number(item.target?.id)));
+        setCandidates((accountData.administradores||[]).filter(item=>item.role==='admin'&&item.isActive!==false&&!assigned.has(Number(item.id))&&!pending.has(Number(item.id))));
       }else{
         setAdmins([]);
         setCandidates([]);
