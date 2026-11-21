@@ -4,6 +4,7 @@ import {qs} from '../api';
 import {Button,Field,Panel,Empty,ErrorBanner,Badge,Table} from '../ui';
 
 const labels={
+  admin_created:'Cuenta administrativa creada',
   association_admin_assigned_initial:'Asignación del primer administrador',
   association_admin_request_created:'Solicitud de incorporación creada',
   association_admin_request_approved:'Solicitud aprobada',
@@ -120,7 +121,7 @@ export default function AdminRequests({call,currentUser,associationContext,assoc
       </Panel>
       <Panel title="Historial de auditoría" subtitle="Registro cronológico de solicitudes, asignaciones y revocaciones.">
         {loading?<div className="association-loading"><RefreshCw className="spin"/> Cargando…</div>:<Table headers={['Fecha','Acción','Actor','Cuenta afectada']} empty={!audit.length}>
-          {audit.map(item=><tr key={item.id}><td>{formatDate(item.createdAt)}</td><td>{labels[item.action]||item.action}</td><td>#{item.actorUserId}</td><td>#{item.targetUserId}</td></tr>)}
+          {audit.map(item=><tr key={item.id}><td>{formatDate(item.createdAt)}</td><td>{labels[item.action]||item.action}</td><td>{item.actor?.nombre||'#'+item.actorUserId}</td><td>{item.target?.nombre||'#'+item.targetUserId}</td></tr>)}
         </Table>}
       </Panel>
     </>}
