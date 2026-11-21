@@ -32,7 +32,7 @@ export default function AdminRequests({call,currentUser,associationContext,assoc
       const preferred=scopeAssociationId||availableAssociations.find(item=>item.isActive!==false)?.id||'';
       setAssociationId(String(preferred||''));
     }else{
-      setAssociationId(String(associationContext?.activeAssociationId||''));
+      setAssociationId(String(associationContext?.activeAssociationId||(associationContext?.associations?.length===1?associationContext.associations[0].id:'')));
     }
   },[superadmin,scopeAssociationId,associationContext?.activeAssociationId,availableAssociations]);
 
