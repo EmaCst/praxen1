@@ -13,6 +13,7 @@ export default function Associations({call,currentUser,notify,onContextUpdated})
   const [selected,setSelected]=useState(null);
   const [administrators,setAdministrators]=useState([]);
   const [availableAdmins,setAvailableAdmins]=useState([]);
+  const [pendingAdminIds,setPendingAdminIds]=useState([]);
   const [search,setSearch]=useState('');
   const [loading,setLoading]=useState(true);
   const [detailLoading,setDetailLoading]=useState(false);
@@ -85,8 +86,12 @@ export default function Associations({call,currentUser,notify,onContextUpdated})
   }
   async function loadAvailableAdmins(){
     try{
-      const result=await call('/api/admin/administradores'+qs({limit:100,offset:0}));
+      const [result,requests]=await Promise.all([
+        call('/api/admin/administradores'+qs({limit:100,offset:0})),
+        call('/api/admin/asociaciones/'+selected.id+'/solicitudes-administrador'+qs({status:'pending',limit:100}))
+      ]);
       setAvailableAdmins((result.administradores||[]).filter(item=>item.role==='admin'&&item.isActive!==false));
+      setPendingAdminIds((requests.solicitudes||[]).map(item=>Number(item.target?.id)));
     }catch(e){setError(messageFor(e));}
   }
   async function startAssign(){
@@ -97,8 +102,11 @@ export default function Associations({call,currentUser,notify,onContextUpdated})
     event.preventDefault();if(!adminId||!selected)return;
     setBusy(true);setError('');
     try{
-      await call('/api/admin/asociaciones/'+selected.id+'/administradores',{method:'POST',body:{userId:Number(adminId)}});
-      setModal(null);await loadAdministrators(selected);notify('Administrador asignado a '+selected.name+'.');
+      const hasActiveAdmins=administrators.some(item=>item.membershipActive&&item.isActive!==false);
+      const endpoint=hasActiveAdmins?'/solicitudes-administrador':'/administradores';
+      await call('/api/admin/asociaciones/'+selected.id+endpoint,{method:'POST',body:{userId:Number(adminId)}});
+      setModal(null);await loadAdministrators(selected);
+      notify(hasActiveAdmins?'Solicitud enviada a los administradores de '+selected.name+'.':'Primer administrador asignado a '+selected.name+'.');
     }catch(e){setError(messageFor(e));}
     finally{setBusy(false);}
   }
@@ -127,8 +135,9 @@ export default function Associations({call,currentUser,notify,onContextUpdated})
   const filtered=useMemo(()=>associations.filter(item=>(item.name+' '+item.slug).toLowerCase().includes(search.toLowerCase())),[associations,search]);
   const activeCount=associations.filter(item=>item.isActive!==false).length;
   const currentAssociation=associations.find(item=>Number(item.id)===Number(context?.activeAssociationId));
-  const assignedIds=new Set(administrators.map(item=>Number(item.id)));
-  const candidates=availableAdmins.filter(item=>!assignedIds.has(Number(item.id)));
+  const activeAdminCount=administrators.filter(item=>item.membershipActive&&item.isActive!==false).length;
+  const assignedIds=new Set(administrators.filter(item=>item.membershipActive&&item.isActive!==false).map(item=>Number(item.id)));
+  const candidates=availableAdmins.filter(item=>!assignedIds.has(Number(item.id))&&!pendingAdminIds.includes(Number(item.id)));
 
   if(selected&&superadmin){
     return <div className="association-page">
@@ -143,7 +152,7 @@ export default function Associations({call,currentUser,notify,onContextUpdated})
         <Badge tone={selected.isActive===false?'off':'success'}>{selected.isActive===false?'Inactiva':'Activa'}</Badge>
         <div className="association-strip-actions"><Button onClick={()=>startEdit(selected)} icon={Edit3}>Editar</Button><Button variant={selected.isActive===false?'primary':'danger'} onClick={()=>toggleAssociation(selected)} icon={Power}>{selected.isActive===false?'Activar':'Desactivar'}</Button></div>
       </div>
-      <Panel title="Administradores asignados" subtitle={administrators.length+' cuentas vinculadas'} action={<Button variant="primary" icon={UserPlus} onClick={startAssign}>Asignar administrador</Button>}>
+      <Panel title="Administradores asignados" subtitle={administrators.length+' cuentas vinculadas'} action={<Button variant="primary" icon={UserPlus} onClick={startAssign} disabled={detailLoading||selected.isActive===false}>{activeAdminCount===0?"Asignar primer administrador":"Solicitar administrador"}</Button>}>
         {detailLoading?<div className="association-loading"><RefreshCw className="spin"/> Cargando administradores…</div>:<Table headers={['Cuenta','Usuario','Estado de membresía','Estado de cuenta','Acciones']} empty={!administrators.length}>
           {administrators.map(item=><tr key={item.id}><td><strong>{item.nombre}</strong></td><td>@{item.username}</td><td><Badge tone={item.membershipActive?'success':'off'}>{item.membershipActive?'Asignado':'Revocado'}</Badge></td><td><Badge tone={item.isActive?'success':'off'}>{item.isActive?'Activa':'Inactiva'}</Badge></td><td>{item.membershipActive?<button className="link-action danger-text" onClick={()=>revokeAdmin(item)}><UserMinus size={14}/> Revocar acceso</button>:<span className="muted">Sin acceso</span>}</td></tr>)}
         </Table>}
@@ -151,8 +160,8 @@ export default function Associations({call,currentUser,notify,onContextUpdated})
       <Panel title="Consideraciones" subtitle="La gestión respeta las reglas de seguridad de la API.">
         <div className="association-info-grid"><div><ShieldCheck size={19}/><strong>Roles protegidos</strong><span>Solo se asignan cuentas con rol Administrador. No se promueven deportistas ni superadministradores.</span></div><div><Users size={19}/><strong>Cuenta independiente</strong><span>Revocar una membresía no elimina la cuenta ni sus asignaciones en otras asociaciones.</span></div><div><CheckCircle2 size={19}/><strong>Auditoría</strong><span>Las asignaciones y revocaciones quedan registradas por la API.</span></div></div>
       </Panel>
-      {modal&&<Modal title={modal.type==='edit'?'Editar asociación':'Asignar administrador'} onClose={()=>!busy&&setModal(null)}>
-        {modal.type==='edit'?<form className="stack" onSubmit={saveAssociation}><Field label="Nombre de la asociación"><input required minLength={2} maxLength={160} value={name} onChange={e=>{setName(e.target.value);if(!slugTouched)setSlug(slugify(e.target.value));}}/></Field><Field label="Identificador (slug)"><input required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" maxLength={80} value={slug} onChange={e=>{setSlugTouched(true);setSlug(e.target.value);}}/><small>Solo minúsculas, números y guiones.</small></Field><ErrorBanner message={error}/><Button type="submit" variant="primary" loading={busy}>Guardar cambios</Button></form>:<form className="stack" onSubmit={assignAdmin}><Field label="Cuenta de administrador"><select required value={adminId} onChange={e=>setAdminId(e.target.value)}><option value="">Selecciona una cuenta…</option>{candidates.map(item=><option key={item.id} value={item.id}>{item.nombre} · @{item.username}</option>)}</select></Field>{!candidates.length&&<p className="muted">No hay administradores activos disponibles para asignar.</p>}<ErrorBanner message={error}/><Button type="submit" variant="primary" loading={busy} disabled={!adminId||!candidates.length}>Asignar a esta asociación</Button></form>}
+      {modal&&<Modal title={modal.type==='edit'?'Editar asociación':activeAdminCount===0?'Asignar primer administrador':'Solicitar incorporación de administrador'} onClose={()=>!busy&&setModal(null)}>
+        {modal.type==='edit'?<form className="stack" onSubmit={saveAssociation}><Field label="Nombre de la asociación"><input required minLength={2} maxLength={160} value={name} onChange={e=>{setName(e.target.value);if(!slugTouched)setSlug(slugify(e.target.value));}}/></Field><Field label="Identificador (slug)"><input required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" maxLength={80} value={slug} onChange={e=>{setSlugTouched(true);setSlug(e.target.value);}}/><small>Solo minúsculas, números y guiones.</small></Field><ErrorBanner message={error}/><Button type="submit" variant="primary" loading={busy}>Guardar cambios</Button></form>:<form className="stack" onSubmit={assignAdmin}><Field label="Cuenta de administrador"><select required value={adminId} onChange={e=>setAdminId(e.target.value)}><option value="">Selecciona una cuenta…</option>{candidates.map(item=><option key={item.id} value={item.id}>{item.nombre} · @{item.username}</option>)}</select></Field>{!candidates.length&&<p className="muted">No hay administradores activos disponibles para asignar.</p>}<ErrorBanner message={error}/><Button type="submit" variant="primary" loading={busy} disabled={!adminId||!candidates.length}>{activeAdminCount===0?"Asignar primer administrador":"Enviar solicitud de incorporación"}</Button></form>}
       </Modal>}
     </div>;
   }

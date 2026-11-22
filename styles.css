@@ -206,3 +206,16 @@ html{overflow-x:hidden}
 .association-context-state p{max-width:520px;margin:0;line-height:1.6;font-size:13px}
 @media(max-width:1050px){.topbar-right{gap:10px}.association-scope-control span{display:none}.association-scope-control select{max-width:175px;min-width:125px}}
 @media(max-width:640px){.topbar-right{gap:7px}.association-scope-control select{max-width:132px;min-width:105px;padding:7px 20px 7px 7px;font-size:10px}.association-scope-pill{max-width:115px;padding:6px 8px}.live-pill{display:none}}
+
+
+/* Association administrator approval workflow */
+.admin-requests-page{display:grid;gap:18px}
+.admin-requests-page .stack{max-width:560px}
+.admin-requests-page .field{max-width:560px}
+.request-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.request-actions .link-action{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.pill.warning{background:#fff5df;color:#9a6b17;border:1px solid #f5e4b9}
+@media(max-width:740px){
+  .request-actions{gap:8px}
+  .admin-requests-page .association-detail-strip{align-items:flex-start}
+}
