@@ -1,5 +1,5 @@
-import React,{useCallback,useEffect,useMemo,useState} from 'react';
-import {Copy,RefreshCw,Send,ShieldCheck,Trash2,Users} from 'lucide-react';
+import React,{useCallback,useEffect,useState} from 'react';
+import {Copy,RefreshCw,Send,ShieldCheck,Trash2} from 'lucide-react';
 import {qs} from '../api';
 import {Button,Field,Panel,Empty,ErrorBanner,Modal,Pager,Table,Badge} from '../ui';
 
@@ -66,7 +66,6 @@ export default function Invitations({call,currentUser,associationContext,associa
   try{await navigator.clipboard.writeText(created.token);notify?.('Código copiado.');}
   catch{setError('No se pudo copiar automáticamente. Selecciona y copia el código manualmente.');}
  }
- const summary=useMemo(()=>items.reduce((acc,item)=>{acc[item.status]=(acc[item.status]||0)+1;return acc;},{}),[items]);
 
  return <div className="invitations-page">
   <div className="page-title">
