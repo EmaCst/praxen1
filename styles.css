@@ -287,3 +287,6 @@ html{overflow-x:hidden}
 .invitation-token code{display:block;flex:1;min-width:220px;overflow-wrap:anywhere;padding:13px 15px;border:1px dashed #b9c9e2;border-radius:10px;background:#f7f9fc;color:#304a6d;font-size:12px}
 .invitations-page .danger-text{color:#b44e54}
 @media(max-width:740px){.invitation-token{align-items:stretch}.invitation-token .button{justify-content:center}.invitation-toolbar .field{max-width:none;width:100%}}
+
+.user-memberships{display:flex;flex-wrap:wrap;gap:5px;min-width:140px}
+.user-memberships .pill{font-size:9px;white-space:normal;line-height:1.35}
