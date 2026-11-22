@@ -5,6 +5,8 @@ import {Button,Field,Panel,Empty,ErrorBanner,Badge,Table} from '../ui';
 
 const labels={
   admin_created:'Cuenta administrativa creada',
+  association_admin_account_deactivated:'Cuenta administrativa desactivada',
+  association_admin_account_reactivated:'Cuenta administrativa reactivada',
   association_admin_assigned_initial:'Asignación del primer administrador',
   association_admin_request_created:'Solicitud de incorporación creada',
   association_admin_request_approved:'Solicitud aprobada',
