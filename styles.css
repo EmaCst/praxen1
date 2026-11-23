@@ -276,3 +276,17 @@ html{overflow-x:hidden}
   .signed-user{padding-bottom:10px}
   .nav-link{padding-top:10px;padding-bottom:10px}
 }
+
+/* Association invitations management */
+.invitations-page{display:grid;gap:18px}
+.invitation-association{display:flex;align-items:center;gap:10px;padding:10px 0;color:#536b89}
+.invitation-association svg{color:#6481df}
+.invitation-toolbar{align-items:end}
+.invitation-toolbar .field{max-width:230px}
+.invitation-token{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.invitation-token code{display:block;flex:1;min-width:220px;overflow-wrap:anywhere;padding:13px 15px;border:1px dashed #b9c9e2;border-radius:10px;background:#f7f9fc;color:#304a6d;font-size:12px}
+.invitations-page .danger-text{color:#b44e54}
+@media(max-width:740px){.invitation-token{align-items:stretch}.invitation-token .button{justify-content:center}.invitation-toolbar .field{max-width:none;width:100%}}
+
+.user-memberships{display:flex;flex-wrap:wrap;gap:5px;min-width:140px}
+.user-memberships .pill{font-size:9px;white-space:normal;line-height:1.35}
