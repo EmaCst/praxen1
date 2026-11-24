@@ -1,5 +1,5 @@
 import React,{useCallback,useEffect,useState} from 'react';
-import {Copy,RefreshCw,Send,ShieldCheck,Trash2} from 'lucide-react';
+import {CheckCircle2,Copy,RefreshCw,Search,Send,ShieldCheck,Trash2,UserRound} from 'lucide-react';
 import {qs} from '../api';
 import {Button,Field,Panel,Empty,ErrorBanner,Modal,Pager,Table,Badge} from '../ui';
 
@@ -20,6 +20,11 @@ export default function Invitations({call,currentUser,associationContext,associa
  const [error,setError]=useState('');
  const [modal,setModal]=useState(false);
  const [username,setUsername]=useState('');
+ const [searchText,setSearchText]=useState('');
+ const [searchResults,setSearchResults]=useState([]);
+ const [searchLoading,setSearchLoading]=useState(false);
+ const [searchPerformed,setSearchPerformed]=useState(false);
+ const [selectedAthlete,setSelectedAthlete]=useState(null);
  const [created,setCreated]=useState(null);
  const [refresh,setRefresh]=useState(0);
 
@@ -29,6 +34,28 @@ export default function Invitations({call,currentUser,associationContext,associa
  },[superadmin,associationContext?.activeAssociationId,availableAssociations,associationId]);
 
  const selectedAssociation=availableAssociations.find(item=>String(item.id)===String(associationId));
+
+ useEffect(()=>{
+  if(!modal||selectedAthlete){setSearchLoading(false);return;}
+  const term=searchText.trim();
+  if(!term){setSearchResults([]);setSearchPerformed(false);setSearchLoading(false);return;}
+  const controller=new AbortController();
+  setSearchLoading(false);
+  setSearchPerformed(false);
+  const timeout=setTimeout(async()=>{
+   setSearchLoading(true);
+   try{
+    const result=await call('/api/admin/directorio/deportistas'+qs({search:term,limit:10}),{force:true,signal:controller.signal});
+    if(!controller.signal.aborted){setSearchResults(result.deportistas||[]);setSearchPerformed(true);}
+   }catch(e){
+    if(!controller.signal.aborted&&e.name!=='AbortError')setError(e.message||'No se pudo buscar deportistas.');
+   }finally{
+    if(!controller.signal.aborted)setSearchLoading(false);
+   }
+  },400);
+  return()=>{clearTimeout(timeout);controller.abort();};
+ },[modal,searchText,selectedAthlete,call]);
+
  const load=useCallback(async()=>{
   if(!associationId){setItems([]);setTotal(0);return;}
   setLoading(true);setError('');
@@ -42,12 +69,12 @@ export default function Invitations({call,currentUser,associationContext,associa
  useEffect(()=>{load();},[load]);
 
  async function createInvitation(event){
-  event.preventDefault();if(!associationId||!username.trim())return;
+  event.preventDefault();if(!associationId||!selectedAthlete?.username)return;
   setBusy(true);setError('');
   try{
-   const result=await call('/api/admin/asociaciones/'+associationId+'/invitaciones',{method:'POST',body:{username:username.trim()}});
+   const result=await call('/api/admin/asociaciones/'+associationId+'/invitaciones',{method:'POST',body:{username:selectedAthlete.username}});
    setCreated({token:result.token,invitation:result.invitacion});
-   setUsername('');setModal(false);setStatus('all');setPage(0);setRefresh(v=>v+1);
+   setUsername('');setSearchText('');setSearchResults([]);setSelectedAthlete(null);setModal(false);setStatus('all');setPage(0);setRefresh(v=>v+1);
    notify?.('Invitación creada. Copia el código y compártelo con el deportista.');
   }catch(e){setError(e.message||'No se pudo crear la invitación.');}
   finally{setBusy(false);}
@@ -70,7 +97,7 @@ export default function Invitations({call,currentUser,associationContext,associa
  return <div className="invitations-page">
   <div className="page-title">
    <div><div className="overline">GESTIÓN INSTITUCIONAL</div><h1>Invitaciones</h1><p className="muted">Incorpora deportistas a una asociación y administra sus invitaciones.</p></div>
-   <Button variant="primary" icon={Send} onClick={()=>{setUsername('');setError('');setModal(true);}} disabled={!associationId}>Invitar deportista</Button>
+   <Button variant="primary" icon={Send} onClick={()=>{setUsername('');setSearchText('');setSearchResults([]);setSelectedAthlete(null);setSearchPerformed(false);setError('');setModal(true);}} disabled={!associationId}>Invitar deportista</Button>
   </div>
   <ErrorBanner message={error}/>
   <Panel title="Asociación" subtitle="Las invitaciones siempre pertenecen a una asociación específica.">
@@ -97,12 +124,39 @@ export default function Invitations({call,currentUser,associationContext,associa
    </Table>}
    <Pager total={total} page={page} size={25} onPage={setPage}/>
   </Panel>
-  {modal&&<Modal title="Invitar deportista" onClose={()=>!busy&&setModal(false)}>
+  {modal&&<Modal title="Invitar deportista" onClose={()=>{if(!busy){setModal(false);setSelectedAthlete(null);setSearchText('');}}}>
    <form className="stack" onSubmit={createInvitation}>
-    <p className="muted">Se enviará una invitación a una cuenta de deportista ya registrada. La persona deberá iniciar sesión y aceptar el código.</p>
-    <Field label="Nombre de usuario"><input required maxLength={32} autoComplete="off" value={username} onChange={e=>setUsername(e.target.value)} placeholder="usuario_deportista"/></Field>
+    <p className="muted">Busca por nombre o nombre de usuario. Selecciona al deportista y verifica su perfil antes de enviar la invitación.</p>
+    {!selectedAthlete?<>
+     <Field label="Buscar deportista">
+      <div className="athlete-directory-search">
+       <Search size={17}/>
+       <input autoComplete="off" value={searchText} onChange={e=>{setSearchText(e.target.value);setError('');}} placeholder="Nombre o usuario…"/>
+      </div>
+     </Field>
+     {searchLoading&&<div className="athlete-search-status"><RefreshCw className="spin" size={15}/> Buscando deportistas…</div>}
+     {!searchLoading&&searchPerformed&&searchResults.length===0&&<div className="athlete-search-empty">No encontramos deportistas con ese nombre o usuario.</div>}
+     {!searchLoading&&searchResults.length>0&&<div className="athlete-search-results" role="listbox" aria-label="Resultados de deportistas">
+      {searchResults.map(athlete=><button type="button" className="athlete-search-result" key={athlete.id} onClick={()=>{setSelectedAthlete(athlete);setUsername(athlete.username||'');setError('');}}>
+       <span className="athlete-search-avatar"><UserRound size={17}/></span>
+       <span className="athlete-search-copy"><strong>{athlete.nombre}</strong><small>@{athlete.username||'sin usuario'} · {athlete.federacion||'Sin federación registrada'}</small></span>
+       <span className="athlete-search-action">Seleccionar</span>
+      </button>)}
+     </div>}
+    </>:<>
+     <div className="athlete-profile-confirm">
+      <div className="athlete-profile-heading"><span className="athlete-search-avatar"><UserRound size={20}/></span><div><strong>{selectedAthlete.nombre}</strong><small>Perfil del deportista</small></div></div>
+      <dl>
+       <div><dt>Nombre de usuario</dt><dd>@{selectedAthlete.username||'No disponible'}</dd></div>
+       <div><dt>Federación</dt><dd>{selectedAthlete.federacion||'No registrada'}</dd></div>
+       <div><dt>Fecha de registro</dt><dd>{dateLabel(selectedAthlete.createdAt)}</dd></div>
+      </dl>
+      <p>Confirma que este sea el deportista correcto antes de continuar.</p>
+     </div>
+     <button type="button" className="link-action" onClick={()=>{setSelectedAthlete(null);setUsername('');}}>← Elegir otro deportista</button>
+    </>}
     <ErrorBanner message={error}/>
-    <Button type="submit" variant="primary" loading={busy} disabled={!username.trim()}>Crear invitación</Button>
+    <Button type="submit" variant="primary" loading={busy} disabled={!selectedAthlete?.username}>Crear invitación</Button>
    </form>
   </Modal>}
  </div>;
