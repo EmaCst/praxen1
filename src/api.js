@@ -18,7 +18,7 @@ export async function api(path,{token,onUnauthorized,skipLogout=false,force=fals
   const execute=async()=>{
     let response;
     try{response=await fetch(API_URL+path,{...requestOptions,method,body:body===undefined?undefined:JSON.stringify(body),cache:'no-store',headers:{Accept:'application/json',...(body===undefined?{}:{'Content-Type':'application/json'}),...(token?{Authorization:'Bearer '+token}:{}),...customHeaders}});}
-    catch{throw new ApiError(0,'No pudimos conectar con la API. Comprueba tu conexión y Render.');}
+    catch(error){if(error?.name==='AbortError')throw error;throw new ApiError(0,'No pudimos conectar con la API. Comprueba tu conexión y Render.');}
     const payload=await response.json().catch(()=>({}));
     if(!response.ok){
       if(response.status===401&&token&&!skipLogout&&onUnauthorized)onUnauthorized();
