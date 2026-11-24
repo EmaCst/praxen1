@@ -19,7 +19,6 @@ export default function Invitations({call,currentUser,associationContext,associa
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState('');
  const [modal,setModal]=useState(false);
- const [username,setUsername]=useState('');
  const [searchText,setSearchText]=useState('');
  const [searchResults,setSearchResults]=useState([]);
  const [searchLoading,setSearchLoading]=useState(false);
@@ -74,7 +73,7 @@ export default function Invitations({call,currentUser,associationContext,associa
   try{
    const result=await call('/api/admin/asociaciones/'+associationId+'/invitaciones',{method:'POST',body:{username:selectedAthlete.username}});
    setCreated({token:result.token,invitation:result.invitacion});
-   setUsername('');setSearchText('');setSearchResults([]);setSelectedAthlete(null);setModal(false);setStatus('all');setPage(0);setRefresh(v=>v+1);
+   setSearchText('');setSearchResults([]);setSelectedAthlete(null);setModal(false);setStatus('all');setPage(0);setRefresh(v=>v+1);
    notify?.('Invitación creada. Copia el código y compártelo con el deportista.');
   }catch(e){setError(e.message||'No se pudo crear la invitación.');}
   finally{setBusy(false);}
@@ -97,7 +96,7 @@ export default function Invitations({call,currentUser,associationContext,associa
  return <div className="invitations-page">
   <div className="page-title">
    <div><div className="overline">GESTIÓN INSTITUCIONAL</div><h1>Invitaciones</h1><p className="muted">Incorpora deportistas a una asociación y administra sus invitaciones.</p></div>
-   <Button variant="primary" icon={Send} onClick={()=>{setUsername('');setSearchText('');setSearchResults([]);setSelectedAthlete(null);setSearchPerformed(false);setError('');setModal(true);}} disabled={!associationId}>Invitar deportista</Button>
+   <Button variant="primary" icon={Send} onClick={()=>{setSearchText('');setSearchResults([]);setSelectedAthlete(null);setSearchPerformed(false);setError('');setModal(true);}} disabled={!associationId}>Invitar deportista</Button>
   </div>
   <ErrorBanner message={error}/>
   <Panel title="Asociación" subtitle="Las invitaciones siempre pertenecen a una asociación específica.">
@@ -131,13 +130,13 @@ export default function Invitations({call,currentUser,associationContext,associa
      <Field label="Buscar deportista">
       <div className="athlete-directory-search">
        <Search size={17}/>
-       <input autoComplete="off" value={searchText} onChange={e=>{setSearchText(e.target.value);setError('');}} placeholder="Nombre o usuario…"/>
+       <input autoComplete="off" value={searchText} onChange={e=>{setSearchText(e.target.value);setSearchResults([]);setSearchPerformed(false);setError('');}} placeholder="Nombre o usuario…"/>
       </div>
      </Field>
      {searchLoading&&<div className="athlete-search-status"><RefreshCw className="spin" size={15}/> Buscando deportistas…</div>}
      {!searchLoading&&searchPerformed&&searchResults.length===0&&<div className="athlete-search-empty">No encontramos deportistas con ese nombre o usuario.</div>}
      {!searchLoading&&searchResults.length>0&&<div className="athlete-search-results" role="listbox" aria-label="Resultados de deportistas">
-      {searchResults.map(athlete=><button type="button" className="athlete-search-result" key={athlete.id} onClick={()=>{setSelectedAthlete(athlete);setUsername(athlete.username||'');setError('');}}>
+      {searchResults.map(athlete=><button type="button" className="athlete-search-result" key={athlete.id} onClick={()=>{setSelectedAthlete(athlete);setError('');}}>
        <span className="athlete-search-avatar"><UserRound size={17}/></span>
        <span className="athlete-search-copy"><strong>{athlete.nombre}</strong><small>@{athlete.username||'sin usuario'} · {athlete.federacion||'Sin federación registrada'}</small></span>
        <span className="athlete-search-action">Seleccionar</span>
@@ -153,7 +152,7 @@ export default function Invitations({call,currentUser,associationContext,associa
       </dl>
       <p>Confirma que este sea el deportista correcto antes de continuar.</p>
      </div>
-     <button type="button" className="link-action" onClick={()=>{setSelectedAthlete(null);setUsername('');}}>← Elegir otro deportista</button>
+     <button type="button" className="link-action" onClick={()=>{setSelectedAthlete(null);}}>← Elegir otro deportista</button>
     </>}
     <ErrorBanner message={error}/>
     <Button type="submit" variant="primary" loading={busy} disabled={!selectedAthlete?.username}>Crear invitación</Button>
