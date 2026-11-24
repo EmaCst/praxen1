@@ -1,5 +1,5 @@
 import React,{useCallback,useEffect,useState} from 'react';
-import {CheckCircle2,Copy,RefreshCw,Search,Send,ShieldCheck,Trash2,UserRound} from 'lucide-react';
+import {RefreshCw,Search,Send,ShieldCheck,Trash2,UserRound} from 'lucide-react';
 import {qs} from '../api';
 import {Button,Field,Panel,Empty,ErrorBanner,Modal,Pager,Table,Badge} from '../ui';
 
@@ -72,9 +72,9 @@ export default function Invitations({call,currentUser,associationContext,associa
   setBusy(true);setError('');
   try{
    const result=await call('/api/admin/asociaciones/'+associationId+'/invitaciones',{method:'POST',body:{username:selectedAthlete.username}});
-   setCreated({token:result.token,invitation:result.invitacion});
+   setCreated(result.invitacion);
    setSearchText('');setSearchResults([]);setSelectedAthlete(null);setModal(false);setStatus('all');setPage(0);setRefresh(v=>v+1);
-   notify?.('Invitación creada. Copia el código y compártelo con el deportista.');
+   notify?.('Invitación creada. Ya está disponible en la bandeja del deportista.');
   }catch(e){setError(e.message||'No se pudo crear la invitación.');}
   finally{setBusy(false);}
  }
@@ -87,11 +87,6 @@ export default function Invitations({call,currentUser,associationContext,associa
   }catch(e){setError(e.message||'No se pudo revocar la invitación.');}
   finally{setBusy(false);}
  }
- async function copyToken(){
-  if(!created?.token)return;
-  try{await navigator.clipboard.writeText(created.token);notify?.('Código copiado.');}
-  catch{setError('No se pudo copiar automáticamente. Selecciona y copia el código manualmente.');}
- }
 
  return <div className="invitations-page">
   <div className="page-title">
@@ -103,10 +98,10 @@ export default function Invitations({call,currentUser,associationContext,associa
    {superadmin?<Field label="Seleccionar asociación"><select value={associationId} onChange={e=>{setAssociationId(e.target.value);setPage(0);setCreated(null);}}><option value="">Selecciona una asociación…</option>{availableAssociations.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
     :<div className="invitation-association"><ShieldCheck size={18}/><strong>{selectedAssociation?.name||'Selecciona una asociación'}</strong></div>}
   </Panel>
-  {created&&<Panel title="Invitación creada" subtitle="Este código se muestra una sola vez. Cópialo y compártelo con el deportista.">
-   <div className="invitation-token"><code>{created.token}</code><Button icon={Copy} onClick={copyToken}>Copiar código</Button></div>
-   <p className="muted">Cuenta: @{created.invitation?.username} · Vence: {dateLabel(created.invitation?.expiresAt)}</p>
-   <button className="link-action" onClick={()=>setCreated(null)}>Cerrar y ocultar código</button>
+  {created&&<Panel title="Invitación creada" subtitle="La solicitud quedó guardada y el deportista puede responderla desde su cuenta.">
+   <p><strong>@{created.username}</strong> · {created.association}</p>
+   <p className="muted">Estado: Pendiente · Vence: {dateLabel(created.expiresAt)}</p>
+   <button className="link-action" onClick={()=>setCreated(null)}>Cerrar</button>
   </Panel>}
   <Panel title="Invitaciones enviadas" subtitle={total+' registros'} action={<Button icon={RefreshCw} onClick={()=>setRefresh(v=>v+1)} loading={loading}>Actualizar</Button>}>
    <div className="toolbar invitation-toolbar">
