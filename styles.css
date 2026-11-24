@@ -290,3 +290,27 @@ html{overflow-x:hidden}
 
 .user-memberships{display:flex;flex-wrap:wrap;gap:5px;min-width:140px}
 .user-memberships .pill{font-size:9px;white-space:normal;line-height:1.35}
+
+/* Búsqueda y confirmación de deportistas al crear invitaciones */
+.athlete-directory-search{display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;border:1px solid #e2e8f2;border-radius:10px;background:#fff;color:#8b9bb0}
+.athlete-directory-search:focus-within{border-color:#7896f6;box-shadow:0 0 0 3px rgba(120,150,246,.1)}
+.athlete-directory-search input{width:100%;height:100%;border:0;outline:0;background:transparent;color:#304764;font-size:12px}
+.athlete-search-status{display:flex;align-items:center;gap:9px;padding:12px 2px;color:#7486a0;font-size:12px}
+.athlete-search-empty{padding:18px 12px;border:1px dashed #dfe6f0;border-radius:10px;color:#8493a8;text-align:center;font-size:12px}
+.athlete-search-results{display:grid;gap:7px;max-height:260px;overflow:auto}
+.athlete-search-result{display:flex;align-items:center;gap:11px;width:100%;padding:11px;border:1px solid #e8edf5;border-radius:11px;background:#fff;text-align:left;color:#405572;transition:border-color .15s,background .15s}
+.athlete-search-result:hover{border-color:#a9baf2;background:#f8faff}
+.athlete-search-avatar{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border-radius:11px;background:#edf2ff;color:#5c78df}
+.athlete-search-copy{display:grid;gap:4px;min-width:0;flex:1}
+.athlete-search-copy strong,.athlete-profile-heading strong{font-size:12px;color:#304764}
+.athlete-search-copy small,.athlete-profile-heading small{font-size:10px;color:#8796aa}
+.athlete-search-action{font-size:10px;font-weight:800;color:#5876df;white-space:nowrap}
+.athlete-profile-confirm{padding:16px;border:1px solid #e5ebf5;border-radius:12px;background:#fafbfe}
+.athlete-profile-heading{display:flex;align-items:center;gap:11px;padding-bottom:14px;border-bottom:1px solid #e8edf5}
+.athlete-profile-heading>div{display:grid;gap:4px}
+.athlete-profile-confirm dl{display:grid;gap:11px;margin:14px 0}
+.athlete-profile-confirm dl>div{display:flex;justify-content:space-between;gap:14px;font-size:11px}
+.athlete-profile-confirm dt{color:#8796aa}
+.athlete-profile-confirm dd{margin:0;text-align:right;color:#405572;font-weight:700}
+.athlete-profile-confirm p{margin:12px 0 0;color:#7889a0;font-size:11px}
+@media(max-width:520px){.athlete-search-action{display:none}.athlete-search-result{padding:9px}.athlete-profile-confirm dl>div{align-items:flex-start;flex-direction:column;gap:3px}.athlete-profile-confirm dd{text-align:left}}
