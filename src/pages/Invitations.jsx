@@ -3,7 +3,7 @@ import {CheckCircle2,Copy,RefreshCw,Search,Send,ShieldCheck,Trash2,UserRound} fr
 import {qs} from '../api';
 import {Button,Field,Panel,Empty,ErrorBanner,Modal,Pager,Table,Badge} from '../ui';
 
-const statusLabel={pending:'Pendiente',accepted:'Aceptada',expired:'Vencida',revoked:'Revocada'};
+const statusLabel={pending:'Pendiente',accepted:'Aceptada',declined:'Rechazada',expired:'Vencida',revoked:'Revocada'};
 const dateLabel=value=>value?new Date(value).toLocaleString('es-GT',{dateStyle:'medium',timeStyle:'short'}):'—';
 
 export default function Invitations({call,currentUser,associationContext,associationList,notify}){
@@ -110,7 +110,7 @@ export default function Invitations({call,currentUser,associationContext,associa
   </Panel>}
   <Panel title="Invitaciones enviadas" subtitle={total+' registros'} action={<Button icon={RefreshCw} onClick={()=>setRefresh(v=>v+1)} loading={loading}>Actualizar</Button>}>
    <div className="toolbar invitation-toolbar">
-    <Field label="Estado"><select value={status} onChange={e=>{setStatus(e.target.value);setPage(0);}}><option value="all">Todos</option><option value="pending">Pendientes</option><option value="accepted">Aceptadas</option><option value="expired">Vencidas</option><option value="revoked">Revocadas</option></select></Field>
+    <Field label="Estado"><select value={status} onChange={e=>{setStatus(e.target.value);setPage(0);}}><option value="all">Todos</option><option value="pending">Pendientes</option><option value="accepted">Aceptadas</option><option value="declined">Rechazadas</option><option value="expired">Vencidas</option><option value="revoked">Revocadas</option></select></Field>
    </div>
    {loading?<div className="association-loading"><RefreshCw className="spin"/> Cargando invitaciones…</div>:<Table headers={['Deportista','Estado','Enviada','Vencimiento','Creada por','Acciones']} empty={!items.length}>
     {items.map(item=><tr key={item.id}>

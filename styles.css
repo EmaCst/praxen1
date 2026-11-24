@@ -314,3 +314,18 @@ html{overflow-x:hidden}
 .athlete-profile-confirm dd{margin:0;text-align:right;color:#405572;font-weight:700}
 .athlete-profile-confirm p{margin:12px 0 0;color:#7889a0;font-size:11px}
 @media(max-width:520px){.athlete-search-action{display:none}.athlete-search-result{padding:9px}.athlete-profile-confirm dl>div{align-items:flex-start;flex-direction:column;gap:3px}.athlete-profile-confirm dd{text-align:left}}
+
+
+/* Invitaciones recibidas por el deportista */
+.athlete-invitation-list{display:grid;gap:10px;margin:4px 0 12px}
+.athlete-invitation-card{display:flex;align-items:center;gap:13px;padding:14px;border:1px solid #e7edf5;border-radius:12px;background:#fff}
+.athlete-invitation-icon{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:12px;background:#edf2ff;color:#5c78df}
+.athlete-invitation-info{display:grid;gap:4px;min-width:0;flex:1}
+.athlete-invitation-info strong{font-size:13px;color:#304764}
+.athlete-invitation-info>span{font-size:11px;color:#75869e}
+.athlete-invitation-info small{display:flex;align-items:center;gap:5px;font-size:10px;color:#9aa7b8}
+.athlete-invitation-actions{display:flex;align-items:center;gap:7px}
+.athlete-invitation-actions .button{white-space:nowrap}
+.athlete-invitations-page .empty-state{display:flex;align-items:center;gap:10px}
+.panel-footer-actions{display:flex;justify-content:flex-end;padding-top:10px}
+@media(max-width:740px){.athlete-invitation-card{align-items:flex-start;flex-wrap:wrap}.athlete-invitation-card>.pill{margin-left:auto}.athlete-invitation-actions{width:100%}.athlete-invitation-actions .button{flex:1;justify-content:center}}

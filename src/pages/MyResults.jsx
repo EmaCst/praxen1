@@ -1,12 +1,13 @@
 import React,{useEffect,useState} from 'react';
 import {Activity,Clock3,Target,RefreshCw,UserRound,CalendarDays} from 'lucide-react';
 import {qs} from '../api';
+import AthleteInvitations from './AthleteInvitations';
 import {TYPES,num,date,duration,mode,exerciseNames} from '../lib';
 import {Button,Panel,Empty,ErrorBanner,ExerciseCards,SparkLines,Badge,Table,Pager} from '../ui';
 
 // Portal individual: todas las peticiones usan /api/resultados/me.
 // La identidad del deportista se determina exclusivamente mediante el JWT validado por la API.
-export default function MyResults({call,user,athleteId,refreshVersion}){
+export default function MyResults({call,user,athleteId,refreshVersion,notify}){
   const [summary,setSummary]=useState(null);
   const [latest,setLatest]=useState(null);
   const [series,setSeries]=useState([]);
@@ -46,6 +47,7 @@ export default function MyResults({call,user,athleteId,refreshVersion}){
       <Button icon={RefreshCw} disabled={loading} onClick={()=>setReload(x=>x+1)}>Actualizar</Button>
     </div>
     <ErrorBanner message={error}/>
+    <AthleteInvitations call={call} refreshVersion={refreshVersion} notify={notify}/>
     <div className="my-profile-strip">
       <div className="my-profile-avatar"><UserRound size={25}/></div>
       <div><strong>{user.nombre||user.username}</strong><span>@{user.username} · Deportista · Natación</span></div>
